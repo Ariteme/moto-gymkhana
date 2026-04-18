@@ -33,13 +33,13 @@ export default function Home() {
 
   // dynamic filters
   const maps = [...new Set(data.map(r => r.map_name))].filter(Boolean)
-  const bikes = [...new Set(data.map(r => r.bike))].filter(Boolean)
+  const bikes = [...new Set(data.map(r => r.bike_normalized))].filter(Boolean)
   const riders = [...new Set(data.map(r => r.riders?.name))].filter(Boolean)
 
   // filtering logic
   const filteredData = data
     .filter(r => !mapFilter || r.map_name === mapFilter)
-    .filter(r => !bikeFilter || r.bike === bikeFilter)
+    .filter(r => !bikeFilter || r.bike_normalized === bikeFilter)
     .filter(r => !riderFilter || r.riders?.name === riderFilter)
 
   const podium = filteredData.slice(0, 3)
