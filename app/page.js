@@ -35,9 +35,17 @@ export default function Home() {
   }, [])
 
   // dynamic filters
-  const maps = [...new Set(data.map(r => r.map_name))].filter(Boolean)
-  const bikes = [...new Set(data.map(r =>r.bike))].filter(Boolean)
-  const riders = [...new Set(data.map(r => r.riders?.name))].filter(Boolean)
+  const maps = [...new Set(data.map(r => r.map_name))]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
+
+  const bikes = [...new Set(data.map(r => r.bike))]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
+
+  const riders = [...new Set(data.map(r => r.riders?.name))]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
 
   // filtering logic
   const filteredData = data
