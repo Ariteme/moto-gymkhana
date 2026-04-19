@@ -64,11 +64,11 @@ export default function Home() {
 
   return (
     <div style={{
-      padding: window.innerWidth < 600 ? 12 : 30,
+      padding: 20,
       fontFamily: 'Arial',
       background: '#0f0f0f',
       minHeight: '100vh',
-      color: 'white'
+      color: 'white',
     }}>
 
       {/* HEADER */}
@@ -107,7 +107,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="🏁 All Maps" active={!mapFilter} onClick={() => setMapFilter('')} />
 
-          {(showAllMaps ? maps : maps.slice(0, 2)).map((m, i) => (
+          {(showAllMaps ? maps : maps.slice(0, 1)).map((m, i) => (
             <Chip key={i} label={m} active={mapFilter === m} onClick={() => setMapFilter(m)} />
           ))}
 
@@ -123,7 +123,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="🏍 All Bikes" active={!bikeFilter} onClick={() => setBikeFilter('')} />
 
-          {(showAllBikes ? bikes : bikes.slice(0, 2)).map((b, i) => (
+          {(showAllBikes ? bikes : bikes.slice(0, 1)).map((b, i) => (
             <Chip key={i} label={b} active={bikeFilter === b} onClick={() => setBikeFilter(b)} />
           ))}
 
@@ -139,7 +139,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="👤 All Riders" active={!riderFilter} onClick={() => setRiderFilter('')} />
 
-          {(showAllRiders ? riders : riders.slice(0, 2)).map((r, i) => (
+          {(showAllRiders ? riders : riders.slice(0, 1)).map((r, i) => (
             <Chip key={i} label={r} active={riderFilter === r} onClick={() => setRiderFilter(r)} />
           ))}
 
@@ -154,7 +154,7 @@ export default function Home() {
       </div> 
 
       {/* PODIUM */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 30 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
         {podium.map((r, i) => {
           const colors = ['#ffd700', '#c0c0c0', '#cd7f32']
 
@@ -163,10 +163,10 @@ export default function Home() {
               background: '#1a1a1a',
               border: `2px solid ${colors[i]}`,
               borderRadius: 12,
-              padding: 15,
-              width: 180,
+              padding: 5,
+              width: 100,
               textAlign: 'center',
-              boxShadow: `0 0 15px ${colors[i]}33`
+              boxShadow: `0 0 25px ${colors[i]}33`
             }}>
               <div style={{ fontSize: 22 }}>
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
@@ -188,58 +188,74 @@ export default function Home() {
         })}
       </div>
 
-      {/* TABLE */}
-      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <table style={{
-          width: '100%',
-          borderCollapse: 'separate',
-          borderSpacing: '0 10px'
-        }}>
-          <thead>
-            <tr style={{ color: '#aaa', textAlign: 'left' }}>
-              <th>#</th>
-              <th>Rider</th>
-              <th>Map</th>
-              <th>Time</th>
-              <th>Bike</th>
-              <th>Video</th>
-            </tr>
-          </thead>
+      {/* TABLE → MOBILE FRIENDLY CARDS */}
+      <div style={{ maxWidth: 320, margin: '0 auto' }}>
 
-          <tbody>
-            {filteredData.map((r, i) => {
-              const videoId = getYoutubeId(r.youtube_url)
+        {filteredData.map((r, i) => {
+          const videoId = getYoutubeId(r.youtube_url)
 
-              return (
-                <tr key={r.id} style={{ background: '#1a1a1a' }}>
-                  <td style={{ padding: '6px 8px', fontSize: 13 }}>{i + 1}</td>
-                  <td style={{ fontSize: 13 }}>{r.riders?.name}</td>
-                  <td style={{ color: '#aaa', fontSize: 13 }}>{r.map_name}</td>
+          return (
+            <div
+              key={r.id}
+              style={{
+                background: '#1a1a1a',
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6
+              }}
+            >
 
-                  <td style={{ color: '#00ff99', fontWeight: 'bold' }}>
-                    {Number(r.lap_time).toFixed(2)}s
-                  </td>
+              {/* TOP LINE: position + rider */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#aaa' }}>Name:</span>
+                <span style={{ fontWeight: 'bold' }}>{r.riders?.name}</span>
+              </div>
 
-                  <td style={{ fontSize: 13 }}>{r.bike}</td>
+              {/* MAP + BIKE */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#aaa' }}>Map:</span>
+                <span>{r.map_name}</span>
+              </div>
 
-                  <td>
-                    {videoId && (
-                      <img
-                        onClick={() => setModalVideo(videoId)}
-                        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                        width="200"
-                        style={{
-                          borderRadius: 8,
-                          cursor: 'pointer'
-                        }}
-                      />
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#aaa' }}>Bike:</span>
+                <span>{r.bike}</span>
+              </div>
+
+              {/* TIME (highlighted) */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 15,
+                fontWeight: 'bold',
+                color: '#00ff99'
+              }}>
+                <span style={{ color: '#aaa', fontWeight: 'normal' }}>Time:</span>
+                <span>{Number(r.lap_time).toFixed(2)}s</span>
+              </div>
+
+              {/* VIDEO */}
+              {videoId && (
+                <img
+                  onClick={() => setModalVideo(videoId)}
+                  src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                  style={{
+                    width: '100%',
+                    maxWidth: 300,
+                    borderRadius: 8,
+                    marginTop: 6,
+                    cursor: 'pointer'
+                  }}
+                />
+              )}
+
+            </div>
+          )
+        })}
+
       </div>
 
       {/* MODAL VIDEO */}
