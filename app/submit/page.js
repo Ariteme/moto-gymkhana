@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 
 export default function Submit() {
   const [form, setForm] = useState({
@@ -229,6 +230,7 @@ export default function Submit() {
   }
 
   return (
+    
     <div style={{
       minHeight: '100vh',
       background: '#0f0f0f',
@@ -249,7 +251,11 @@ export default function Submit() {
           border: '1px solid #333'
         }}
       >
-
+        <div style={{ marginBottom: 20 }}>
+          <Link href="/" style={backBtnStyle}>
+            ← Back
+          </Link>
+        </div>
         <h1 style={{ textAlign: 'center', fontSize: 28 }}>
           🏁 Submit Run
         </h1>
@@ -377,4 +383,15 @@ const inputStyle = {
   background: '#111',
   color: 'white',
   outline: 'none'
+}
+
+const backBtnStyle = {
+  display: 'inline-block',
+  padding: '8px 14px',
+  background: '#1a1a1a',
+  color: '#fff',
+  borderRadius: 8,
+  textDecoration: 'none',
+  border: '1px solid #333',
+  fontSize: 13
 }

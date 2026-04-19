@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 
 export default function Admin() {
   const [data, setData] = useState([])
@@ -61,6 +62,11 @@ export default function Admin() {
       <div style={{ textAlign: 'center', marginBottom: 30 }}>
         <h1 style={{ fontSize: 40, margin: 0 }}>🛠 Admin Panel</h1>
         <p style={{ color: '#aaa' }}>Manage Moto Gymkhana results</p>
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <Link href="/" style={backBtnStyle}>
+          ← Back
+        </Link>
       </div>
 
       {/* CARDS */}
@@ -140,4 +146,15 @@ export default function Admin() {
       </div>
     </div>
   )
+}
+
+const backBtnStyle = {
+  display: 'inline-block',
+  padding: '8px 14px',
+  background: '#1a1a1a',
+  color: '#fff',
+  borderRadius: 8,
+  textDecoration: 'none',
+  border: '1px solid #333',
+  fontSize: 13
 }

@@ -9,6 +9,9 @@ export default function Home() {
   const [bikeFilter, setBikeFilter] = useState('')
   const [riderFilter, setRiderFilter] = useState('')
   const [modalVideo, setModalVideo] = useState(null)
+  const [showAllBikes, setShowAllBikes] = useState(false)
+  const [showAllMaps, setShowAllMaps] = useState(false)
+  const [showAllRiders, setShowAllRiders] = useState(false) 
 
   const fetchData = async () => {
     const { data } = await supabase
@@ -65,7 +68,24 @@ export default function Home() {
         <h1 style={{ fontSize: 40, margin: 0 }}>🏁 Moto Gymkhana Leaderboard</h1>
         <p style={{ color: '#aaa' }}>Live competition results</p>
       </div>
+      {/* NAVIGATION */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: 10,
+        marginBottom: 20,
+        flexWrap: 'wrap'
+      }}>
 
+        <a href="/submit" style={navBtnStyle}>
+          ➕ Submit Run
+        </a>
+
+        <a href="/admin" style={navBtnStyleSecondary}>
+          🛠 Admin Panel
+        </a>
+
+      </div>
       {/* FILTERS */}
       <div style={{
         display: 'flex',
@@ -78,27 +98,52 @@ export default function Home() {
         {/* MAPS */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="🏁 All Maps" active={!mapFilter} onClick={() => setMapFilter('')} />
-          {maps.map((m, i) => (
+
+          {(showAllMaps ? maps : maps.slice(0, 2)).map((m, i) => (
             <Chip key={i} label={m} active={mapFilter === m} onClick={() => setMapFilter(m)} />
           ))}
+
+          {maps.length > 2 && (
+            <Chip
+              label={showAllMaps ? 'Less' : `+${maps.length - 2}`}
+              onClick={() => setShowAllMaps(!showAllMaps)}
+            />
+          )}
         </div>
 
         {/* BIKES */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="🏍 All Bikes" active={!bikeFilter} onClick={() => setBikeFilter('')} />
-          {bikes.map((b, i) => (
+
+          {(showAllBikes ? bikes : bikes.slice(0, 2)).map((b, i) => (
             <Chip key={i} label={b} active={bikeFilter === b} onClick={() => setBikeFilter(b)} />
           ))}
+
+          {bikes.length > 2 && (
+            <Chip
+              label={showAllBikes ? 'Less' : `+${bikes.length - 2}`}
+              onClick={() => setShowAllBikes(!showAllBikes)}
+            />
+          )}
         </div>
 
         {/* RIDERS */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip label="👤 All Riders" active={!riderFilter} onClick={() => setRiderFilter('')} />
-          {riders.map((r, i) => (
+
+          {(showAllRiders ? riders : riders.slice(0, 2)).map((r, i) => (
             <Chip key={i} label={r} active={riderFilter === r} onClick={() => setRiderFilter(r)} />
           ))}
+
+          {riders.length > 2 && (
+            <Chip
+              label={showAllRiders ? 'Less' : `+${riders.length - 2}`}
+              onClick={() => setShowAllRiders(!showAllRiders)}
+            />
+          )}
         </div>
-      </div>
+
+      </div> 
 
       {/* PODIUM */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 30 }}>
@@ -253,4 +298,27 @@ function Chip({ label, active, onClick }) {
       {label}
     </button>
   )
+  
+}
+const navBtnStyle = {
+  padding: '10px 16px',
+  background: '#1a1a1a',
+  color: '#fff',
+  borderRadius: 10,
+  textDecoration: 'none',
+  fontWeight: 'bold',
+  fontSize: 14,
+  boxShadow: '0 0 10px #00ff9955'
+}
+
+const navBtnStyleSecondary = {
+  padding: '10px 16px',
+  background: '#1a1a1a',
+  color: '#fff',
+  borderRadius: 10,
+  textDecoration: 'none',
+  fontWeight: 'bold',
+  fontSize: 14,
+  border: '1px solid #333',
+  boxShadow: '0 0 10px #00ff9955'
 }
