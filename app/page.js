@@ -64,7 +64,7 @@ export default function Home() {
 
   return (
     <div style={{
-      padding: 30,
+      padding: window.innerWidth < 600 ? 12 : 30,
       fontFamily: 'Arial',
       background: '#0f0f0f',
       minHeight: '100vh',
@@ -212,15 +212,15 @@ export default function Home() {
 
               return (
                 <tr key={r.id} style={{ background: '#1a1a1a' }}>
-                  <td style={{ padding: 10 }}>#{i + 1}</td>
-                  <td>{r.riders?.name}</td>
-                  <td style={{ color: '#aaa' }}>{r.map_name}</td>
+                  <td style={{ padding: '6px 8px', fontSize: 13 }}>{i + 1}</td>
+                  <td style={{ fontSize: 13 }}>{r.riders?.name}</td>
+                  <td style={{ color: '#aaa', fontSize: 13 }}>{r.map_name}</td>
 
                   <td style={{ color: '#00ff99', fontWeight: 'bold' }}>
                     {Number(r.lap_time).toFixed(2)}s
                   </td>
 
-                  <td>{r.bike}</td>
+                  <td style={{ fontSize: 13 }}>{r.bike}</td>
 
                   <td>
                     {videoId && (
