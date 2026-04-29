@@ -111,9 +111,9 @@ export default function Home() {
             <Chip key={i} label={m} active={mapFilter === m} onClick={() => setMapFilter(m)} />
           ))}
 
-          {maps.length > 2 && (
+          {maps.length > 1 && (
             <Chip
-              label={showAllMaps ? 'Less' : `+${maps.length - 2}`}
+              label={showAllMaps ? 'Less' : `+${maps.length - 1}`}
               onClick={() => setShowAllMaps(!showAllMaps)}
             />
           )}
@@ -127,9 +127,9 @@ export default function Home() {
             <Chip key={i} label={b} active={bikeFilter === b} onClick={() => setBikeFilter(b)} />
           ))}
 
-          {bikes.length > 2 && (
+          {bikes.length > 1 && (
             <Chip
-              label={showAllBikes ? 'Less' : `+${bikes.length - 2}`}
+              label={showAllBikes ? 'Less' : `+${bikes.length - 1}`}
               onClick={() => setShowAllBikes(!showAllBikes)}
             />
           )}
@@ -143,9 +143,9 @@ export default function Home() {
             <Chip key={i} label={r} active={riderFilter === r} onClick={() => setRiderFilter(r)} />
           ))}
 
-          {riders.length > 2 && (
+          {riders.length > 1 && (
             <Chip
-              label={showAllRiders ? 'Less' : `+${riders.length - 2}`}
+              label={showAllRiders ? 'Less' : `+${riders.length - 1}`}
               onClick={() => setShowAllRiders(!showAllRiders)}
             />
           )}

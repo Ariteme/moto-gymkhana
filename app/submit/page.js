@@ -1,19 +1,59 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 export default function Submit() {
-  const [form, setForm] = useState({
-    name: '',
-    map: '',
-    time: '',
-    bike: '',
-    youtube: ''
-  })
+
+    const [form, setForm] = useState({
+      name: '',
+      plate: '',
+      map: '',
+      time: '',
+      bike: '',
+      youtube: ''
+    })
+
+  const MAPS = [
+    "Pita GP",
+    "Gymfun OLC1",
+    "Moldova GP",
+    "8Rings"
+  ]
 
   const [bikeSearch, setBikeSearch] = useState('')
+  const [allRiders, setAllRiders] = useState([])
+  const [riderSuggestions, setRiderSuggestions] = useState([])
+  const [mapSearch, setMapSearch] = useState('')
+  const [showMapDropdown, setShowMapDropdown] = useState(false)
+
+  useEffect(() => {
+    async function fetchRiders() {
+      const { data } = await supabase.from('riders').select('name, plate, bike')
+      if (data) {
+        setAllRiders(data)
+      }
+    }
+    fetchRiders()
+  }, [])
+
+  const handleNameChange = (e) => {
+    const value = e.target.value
+    // English-only validation
+    if (!/^[A-Za-z0-9\s]*$/.test(value)) {
+      alert("Please use English characters only.")
+      return
+    }
+    setForm(prev => ({ ...prev, name: value }))
+    setRiderSuggestions(allRiders.filter(r => r.name.toLowerCase().includes(value.toLowerCase())))
+  }
+
+  const selectRider = (rider) => {
+    setForm(prev => ({ ...prev, name: rider.name, plate: rider.plate, bike: rider.bike }))
+    setBikeSearch(rider.bike)
+    setRiderSuggestions([])
+  }
 
   const BIKES = [
 
@@ -173,22 +213,27 @@ export default function Submit() {
     try {
       let rider = null
 
-      const { data: existingRider } = await supabase
+      const { data: existingRider, error: fetchError } = await supabase
         .from('riders')
         .select('*')
-        .eq('name', form.name)
-        .single()
+        .filter('plate', 'eq', form.plate)
+        .maybeSingle()
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError)
+      }
 
       if (existingRider) {
         rider = existingRider
       } else {
-        const { data: newRider, error } = await supabase
+        const { data: newRider, error: insertError } = await supabase
           .from('riders')
-          .insert([{ name: form.name }])
+          .insert([{ name: form.name, plate: form.plate, bike: form.bike.trim() }])
           .select()
           .single()
 
-        if (error) {
+        if (insertError) {
+          console.error('Insert error:', insertError)
           alert('Failed to create rider')
           return
         }
@@ -216,10 +261,11 @@ export default function Submit() {
 
       setForm({
         name: '',
-        map: '',
-        time: '',
-        bike: '',
-        youtube: ''
+          plate: '',
+          map: '',
+          time: '',
+          bike: '',
+          youtube: ''
       })
 
       setBikeSearch('')
@@ -273,17 +319,54 @@ export default function Submit() {
           name="name"
           placeholder="Rider name"
           value={form.name}
-          onChange={handleChange}
+          onChange={handleNameChange}
           style={inputStyle}
         />
+        {riderSuggestions.length > 0 && form.name && (
+          <div style={{ background: '#333', color: 'white', padding: 5, borderRadius: 4, marginBottom: 10 }}>
+            {riderSuggestions.map(rider => (
+              <div key={rider.name} onClick={() => selectRider(rider)} style={{ cursor: 'pointer', padding: 5 }}>
+                {rider.name} ({rider.plate})
+              </div>
+            ))}
+          </div>
+        )}
+          <input
+            name="plate"
+            placeholder="Number plate"
+            value={form.plate}
+            onChange={handleChange}
+            style={inputStyle}
+          />
 
-        <input
-          name="map"
-          placeholder="Track / Map"
-          value={form.map}
-          onChange={handleChange}
-          style={inputStyle}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            name="map"
+            placeholder="Select Track / Map"
+            value={form.map}
+            onFocus={() => setShowMapDropdown(true)}
+            onBlur={() => setTimeout(() => setShowMapDropdown(false), 200)}
+            onChange={(e) => {
+                const value = e.target.value
+                if (!/^[A-Za-z0-9\s]*$/.test(value)) {
+                    alert("Please use English characters only.")
+                    return
+                }
+                setForm(prev => ({ ...prev, map: value }))
+                setMapSearch(value)
+            }}
+            style={inputStyle}
+          />
+          {showMapDropdown && (
+            <div style={{ background: '#333', color: 'white', padding: 5, borderRadius: 4, marginBottom: 10, position: 'absolute', width: '100%', zIndex: 9999 }}>
+              {MAPS.filter(m => m.toLowerCase().includes(mapSearch.toLowerCase())).map(map => (
+                <div key={map} onClick={() => { setForm(prev => ({ ...prev, map })); setShowMapDropdown(false) }} style={{ cursor: 'pointer', padding: 5 }}>
+                  {map}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <input
           name="time"
