@@ -45,8 +45,9 @@ export default function Submit() {
   const [riderSuggestions, setRiderSuggestions] = useState([])
 
   // Plate / bike lookup
-  const [plateStatus, setPlateStatus] = useState('idle') // idle | loading | found | new
+  const [plateStatus, setPlateStatus] = useState('idle') // idle | loading | found | new | invalid
   const [bikeSearch, setBikeSearch] = useState('')
+  const [plateDisplay, setPlateDisplay] = useState('')
 
   // Map
   const [maps, setMaps] = useState([])
@@ -77,18 +78,32 @@ export default function Submit() {
     setRiderSuggestions([])
   }
 
-  const handlePlateLookup = async () => {
-    const plate = form.plate.trim()
-    if (!plate) return
+  const handlePlateChange = async (e) => {
+    const raw = e.target.value
+    if (!/^[\d\s-]*$/.test(raw)) return  // only digits, spaces, dashes
+    setPlateDisplay(raw)
+
+    const digits = raw.replace(/[\s-]/g, '')
+    setForm(prev => ({ ...prev, plate: digits, bikeModel: '' }))
+    setBikeSearch('')
+
+    if (digits.length < 8) {
+      setPlateStatus(digits.length > 0 ? 'invalid' : 'idle')
+      return
+    }
+    if (digits.length > 8) {
+      setPlateStatus('invalid')
+      return
+    }
+
+    // exactly 8 digits — auto lookup
     setPlateStatus('loading')
-    const { data } = await supabase.from('bikes').select('model').eq('plate', plate).maybeSingle()
+    const { data } = await supabase.from('bikes').select('model').eq('plate', digits).maybeSingle()
     if (data) {
       setForm(prev => ({ ...prev, bikeModel: data.model }))
       setBikeSearch(data.model)
       setPlateStatus('found')
     } else {
-      setForm(prev => ({ ...prev, bikeModel: '' }))
-      setBikeSearch('')
       setPlateStatus('new')
     }
   }
@@ -100,8 +115,9 @@ export default function Submit() {
     e.preventDefault()
 
     if (!form.name.trim()) return alert('Please enter your name.')
-    if (!form.plate.trim()) return alert('Please enter a plate number.')
-    if (plateStatus === 'idle') return alert('Please click Check to look up your plate.')
+    if (form.plate.length !== 8) return alert('Please enter a valid 8-digit plate number.')
+    if (plateStatus === 'loading') return alert('Still looking up plate, please wait.')
+    if (plateStatus === 'invalid') return alert('Please enter a valid 8-digit plate number.')
     if (plateStatus === 'new' && !form.bikeModel.trim()) return alert('Please select your bike model.')
     if (!form.map.trim()) return alert('Please select or enter a map.')
     if (!form.time) return alert('Please enter a lap time.')
@@ -186,30 +202,24 @@ export default function Submit() {
           )}
         </div>
 
-        {/* PLATE + CHECK */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input
-            placeholder="Plate number"
-            value={form.plate}
-            onChange={(e) => { setForm(prev => ({ ...prev, plate: e.target.value })); setPlateStatus('idle') }}
-            style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
-            required
-          />
-          <button
-            type="button"
-            onClick={handlePlateLookup}
-            style={{ padding: '10px 14px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13 }}
-          >
-            {plateStatus === 'loading' ? '...' : 'Check'}
-          </button>
-        </div>
-
-        {plateStatus === 'found' && (
-          <p style={{ color: '#00ff99', fontSize: 12, marginBottom: 10 }}>✅ Bike found: {form.bikeModel}</p>
-        )}
-        {plateStatus === 'new' && (
-          <p style={{ color: 'orange', fontSize: 12, marginBottom: 8 }}>⚠️ New plate — select your bike model below</p>
-        )}
+        {/* PLATE — auto-lookup on 8 digits */}
+        <input
+          placeholder="Plate number (e.g. 9999-9999)"
+          value={plateDisplay}
+          onChange={handlePlateChange}
+          style={{
+            ...inputStyle,
+            borderColor: plateStatus === 'invalid' ? '#ff4444'
+              : plateStatus === 'found' ? '#00ff99'
+              : plateStatus === 'new' ? 'orange'
+              : '#333'
+          }}
+          required
+        />
+        {plateStatus === 'loading' && <p style={{ color: '#aaa', fontSize: 12, marginBottom: 8 }}>Looking up plate...</p>}
+        {plateStatus === 'invalid' && <p style={{ color: '#ff4444', fontSize: 12, marginBottom: 8 }}>Israeli plates are 8 digits</p>}
+        {plateStatus === 'found' && <p style={{ color: '#00ff99', fontSize: 12, marginBottom: 8 }}>✅ Bike found: {form.bikeModel}</p>}
+        {plateStatus === 'new' && <p style={{ color: 'orange', fontSize: 12, marginBottom: 8 }}>⚠️ New plate — select your bike model below</p>}
 
         {/* BIKE MODEL — only shown after plate check */}
         {(plateStatus === 'found' || plateStatus === 'new') && (
