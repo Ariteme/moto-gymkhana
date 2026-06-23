@@ -75,8 +75,8 @@ export default function Home() {
 
       {/* HEADER */}
       <div style={{ textAlign: 'center', marginBottom: 30 }}>
-        <h1 style={{ fontSize: 40, margin: 0 }}>🏁 Moto Gymkhana Leaderboard</h1>
-        <p style={{ color: '#aaa' }}>Live competition results</p>
+        <h1 style={{ fontSize: 40, margin: 0 }}>🏁 Israeli Moto Gymkhana</h1>
+        <p style={{ color: '#aaa' }}>Live competition leaderboard</p>
       </div>
       {/* NAVIGATION */}
       <div style={{

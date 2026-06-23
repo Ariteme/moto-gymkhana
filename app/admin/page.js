@@ -81,7 +81,7 @@ export default function Admin() {
 
       <div style={{ textAlign: 'center', marginBottom: 30 }}>
         <h1 style={{ fontSize: 40, margin: 0 }}>🛠 Admin Panel</h1>
-        <p style={{ color: '#aaa' }}>Manage Moto Gymkhana results</p>
+        <p style={{ color: '#aaa' }}>Manage Israeli Moto Gymkhana results</p>
       </div>
 
       <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>

@@ -179,7 +179,7 @@ export default function Submit() {
           <Link href="/" style={backBtnStyle}>← Back</Link>
         </div>
 
-        <h1 style={{ textAlign: 'center', fontSize: 28, marginBottom: 6 }}>🏁 Submit Run</h1>
+        <h1 style={{ textAlign: 'center', fontSize: 28, marginBottom: 6 }}>🏁 Israeli Moto Gymkhana</h1>
         <p style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginBottom: 20 }}>Enter your best lap time</p>
 
         {/* RIDER NAME */}
