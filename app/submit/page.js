@@ -87,8 +87,8 @@ export default function Submit() {
     setForm(prev => ({ ...prev, plate: digits, bikeModel: '' }))
     setBikeSearch('')
 
-    if (digits.length < 8) {
-      setPlateStatus(digits.length > 0 ? 'invalid' : 'idle')
+    if (digits.length < 7) {
+      setPlateStatus(digits.length > 0 ? 'idle' : 'idle')
       return
     }
     if (digits.length > 8) {
@@ -96,7 +96,7 @@ export default function Submit() {
       return
     }
 
-    // exactly 8 digits — auto lookup
+    // 7 digits (XX-XXX-XX) or 8 digits (XXX-XX-XXX) — auto lookup
     setPlateStatus('loading')
     const { data } = await supabase.from('bikes').select('model').eq('plate', digits).maybeSingle()
     if (data) {
@@ -115,7 +115,7 @@ export default function Submit() {
     e.preventDefault()
 
     if (!form.name.trim()) return alert('Please enter your name.')
-    if (form.plate.length !== 8) return alert('Please enter a valid 8-digit plate number.')
+    if (form.plate.length !== 7 && form.plate.length !== 8) return alert('Please enter a valid plate number (7 or 8 digits).')
     if (plateStatus === 'loading') return alert('Still looking up plate, please wait.')
     if (plateStatus === 'invalid') return alert('Please enter a valid 8-digit plate number.')
     if (plateStatus === 'new' && !form.bikeModel.trim()) return alert('Please select your bike model.')
@@ -204,7 +204,7 @@ export default function Submit() {
 
         {/* PLATE — auto-lookup on 8 digits */}
         <input
-          placeholder="Plate number (e.g. 9999-9999)"
+          placeholder="Plate (e.g. 123-45-678 or 12-345-67)"
           value={plateDisplay}
           onChange={handlePlateChange}
           style={{
@@ -217,7 +217,7 @@ export default function Submit() {
           required
         />
         {plateStatus === 'loading' && <p style={{ color: '#aaa', fontSize: 12, marginBottom: 8 }}>Looking up plate...</p>}
-        {plateStatus === 'invalid' && <p style={{ color: '#ff4444', fontSize: 12, marginBottom: 8 }}>Israeli plates are 8 digits</p>}
+        {plateStatus === 'invalid' && <p style={{ color: '#ff4444', fontSize: 12, marginBottom: 8 }}>Plates are 7 digits (older) or 8 digits (new)</p>}
         {plateStatus === 'found' && <p style={{ color: '#00ff99', fontSize: 12, marginBottom: 8 }}>✅ Bike found: {form.bikeModel}</p>}
         {plateStatus === 'new' && <p style={{ color: 'orange', fontSize: 12, marginBottom: 8 }}>⚠️ New plate — select your bike model below</p>}
 
