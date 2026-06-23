@@ -30,22 +30,24 @@ export default function Admin() {
   }, [])
 
   const approve = async (id) => {
-    await supabase
+    const { error } = await supabase
       .from('results')
       .update({ approved: true })
       .eq('id', id)
 
+    if (error) { alert('Approve failed: ' + error.message); return }
     fetchData()
   }
 
   const remove = async (id) => {
     if (!confirm('Delete this run?')) return
 
-    await supabase
+    const { error } = await supabase
       .from('results')
       .delete()
       .eq('id', id)
 
+    if (error) { alert('Delete failed: ' + error.message); return }
     fetchData()
   }
 
