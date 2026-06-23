@@ -53,7 +53,9 @@ export default function Home() {
     .filter(r => !bikeFilter ||r.bike === bikeFilter)
     .filter(r => !riderFilter || r.riders?.name === riderFilter)
 
-  const podium = filteredData.slice(0, 3)
+  const podiumMaps = mapFilter
+    ? [mapFilter]
+    : [...new Set(filteredData.map(r => r.map_name))].filter(Boolean).sort()
 
   function getYoutubeId(url) {
     if (!url) return null
@@ -153,35 +155,35 @@ export default function Home() {
 
       </div> 
 
-      {/* PODIUM */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
-        {podium.map((r, i) => {
+      {/* PODIUM — per map when no filter, single when filtered */}
+      <div style={{ marginBottom: 20 }}>
+        {podiumMaps.map(mapName => {
           const colors = ['#ffd700', '#c0c0c0', '#cd7f32']
-
+          const top3 = filteredData.filter(r => r.map_name === mapName).slice(0, 3)
+          if (top3.length === 0) return null
           return (
-            <div key={r.id} style={{
-              background: '#1a1a1a',
-              border: `2px solid ${colors[i]}`,
-              borderRadius: 12,
-              padding: 5,
-              width: 100,
-              textAlign: 'center',
-              boxShadow: `0 0 25px ${colors[i]}33`
-            }}>
-              <div style={{ fontSize: 22 }}>
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
-              </div>
-
-              <div style={{ fontWeight: 'bold', fontSize: 18 }}>
-                {r.riders?.name}
-              </div>
-
-              <div style={{ color: '#aaa', fontSize: 12 }}>
-                {r.map_name}
-              </div>
-
-              <div style={{ color: colors[i], fontSize: 20, fontWeight: 'bold' }}>
-                {Number(r.lap_time).toFixed(2)}s
+            <div key={mapName} style={{ marginBottom: 16 }}>
+              {!mapFilter && (
+                <div style={{ textAlign: 'center', color: '#aaa', fontSize: 12, letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+                  🏁 {mapName}
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+                {top3.map((r, i) => (
+                  <div key={r.id} style={{
+                    background: '#1a1a1a',
+                    border: `2px solid ${colors[i]}`,
+                    borderRadius: 12,
+                    padding: 5,
+                    width: 100,
+                    textAlign: 'center',
+                    boxShadow: `0 0 25px ${colors[i]}33`
+                  }}>
+                    <div style={{ fontSize: 22 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: 16 }}>{r.riders?.name}</div>
+                    <div style={{ color: colors[i], fontSize: 20, fontWeight: 'bold' }}>{Number(r.lap_time).toFixed(2)}s</div>
+                  </div>
+                ))}
               </div>
             </div>
           )
