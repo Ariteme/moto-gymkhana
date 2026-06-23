@@ -4,6 +4,17 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+const BG = '#07090f'
+const SURFACE = '#0c1118'
+const CARD = '#101821'
+const BORDER = '#1a2840'
+const GREEN = '#00ff99'
+const BLUE = '#1a5cff'
+const TEXT = '#dce8f4'
+const MUTED = '#7a90a8'
+const ORANGE = '#ffa502'
+const RED = '#ff4757'
+
 export default function Admin() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
@@ -37,7 +48,7 @@ export default function Admin() {
   const fetchData = async () => {
     const { data } = await supabase
       .from('results')
-      .select(`id, map_name, lap_time, bike, youtube_url, approved, created_at, riders ( name )`)
+      .select('id, map_name, lap_time, bike, youtube_url, approved, created_at, riders(name)')
       .order('created_at', { ascending: false })
     setData(data || [])
   }
@@ -55,90 +66,223 @@ export default function Admin() {
     fetchData()
   }
 
+  /* ── LOGIN SCREEN ── */
   if (!authed) return (
-    <div style={{ minHeight: '100vh', background: '#0f0f0f', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Arial' }}>
-      <form onSubmit={handleLogin} style={{ background: '#1a1a1a', padding: 30, borderRadius: 14, width: 300, border: '1px solid #333', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 10 }}>🔒</div>
-        <h2 style={{ color: 'white', marginBottom: 20, fontSize: 20 }}>Admin Access</h2>
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); setAuthError(false) }}
-          autoFocus
-          style={{ width: '100%', padding: 10, marginBottom: 10, borderRadius: 6, border: authError ? '1px solid #ff4444' : '1px solid #333', background: '#111', color: 'white', outline: 'none', boxSizing: 'border-box' }}
-        />
-        {authError && <p style={{ color: '#ff4444', fontSize: 12, marginBottom: 10 }}>Wrong password</p>}
-        <button type="submit" style={{ width: '100%', padding: 12, background: '#00ff99', color: '#000', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
-          Enter
-        </button>
-      </form>
+    <div style={{
+      minHeight: '100vh', background: BG,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'var(--font-geist-sans, Arial, sans-serif)', padding: 16,
+    }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>Admin Access</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Israeli Moto Gymkhana</div>
+        </div>
+
+        <form onSubmit={handleLogin} style={{
+          background: CARD, border: `1px solid ${BORDER}`,
+          borderRadius: 16, padding: 24,
+        }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>
+            Password
+          </label>
+          <input
+            type="password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setAuthError(false) }}
+            autoFocus
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: 10,
+              border: `1px solid ${authError ? RED : BORDER}`,
+              background: BG, color: TEXT, outline: 'none',
+              boxSizing: 'border-box', fontSize: 16, marginBottom: 8,
+            }}
+          />
+          {authError && (
+            <div style={{ color: RED, fontSize: 13, marginBottom: 12, padding: '7px 12px', background: `${RED}12`, borderRadius: 8, border: `1px solid ${RED}30` }}>
+              ✗ Wrong password
+            </div>
+          )}
+          <button type="submit" style={{
+            width: '100%', marginTop: 8, padding: '13px 20px',
+            background: GREEN, color: '#000',
+            border: 'none', borderRadius: 10,
+            fontWeight: 800, fontSize: 16, cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(0,255,153,0.25)',
+          }}>
+            Enter
+          </button>
+        </form>
+      </div>
     </div>
   )
 
+  /* ── ADMIN PANEL ── */
+  const pending = data.filter(r => !r.approved)
+  const approved = data.filter(r => r.approved)
+
   return (
-    <div style={{ padding: 30, fontFamily: 'Arial', background: '#0f0f0f', minHeight: '100vh', color: 'white' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
 
-      <div style={{ textAlign: 'center', marginBottom: 30 }}>
-        <h1 style={{ fontSize: 40, margin: 0 }}>🛠 Admin Panel</h1>
-        <p style={{ color: '#aaa' }}>Manage Israeli Moto Gymkhana results</p>
-      </div>
-
-      <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>
-        <Link href="/" style={backBtnStyle}>← Back</Link>
-        <button
-          onClick={() => { sessionStorage.removeItem('admin_auth'); setAuthed(false) }}
-          style={{ ...backBtnStyle, background: 'none', cursor: 'pointer', border: '1px solid #444', color: '#aaa' }}
-        >
-          🔒 Lock
-        </button>
-      </div>
-
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        {data.map((r) => (
-          <div key={r.id} style={{
-            background: '#1a1a1a',
-            padding: 15,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: r.approved ? '1px solid #00ff99' : '1px solid orange',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div>
-              <div style={{ fontSize: 18 }}><b>{r.riders?.name}</b></div>
-              <div style={{ color: '#aaa', fontSize: 13 }}>{r.map_name} • {r.bike}</div>
-              <div style={{ fontSize: 12, marginTop: 5 }}>{r.approved ? '🟢 Approved' : '🟠 Pending'}</div>
-            </div>
-
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 20, fontWeight: 'bold', color: '#00ff99' }}>{Number(r.lap_time).toFixed(2)}s</div>
-              <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                {!r.approved && (
-                  <button onClick={() => approve(r.id)} style={{ background: 'green', color: 'white', border: 'none', padding: '5px 10px', borderRadius: 5, cursor: 'pointer' }}>
-                    Approve
-                  </button>
-                )}
-                <button onClick={() => remove(r.id)} style={{ background: 'red', color: 'white', border: 'none', padding: '5px 10px', borderRadius: 5, cursor: 'pointer' }}>
-                  Delete
-                </button>
-              </div>
-            </div>
+      {/* HEADER */}
+      <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
+        <div style={{ padding: '16px 16px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <Link href="/" style={{ color: MUTED, fontSize: 13, padding: '6px 10px', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+              ← Back
+            </Link>
+            <button
+              onClick={() => { sessionStorage.removeItem('admin_auth'); setAuthed(false) }}
+              style={{ background: 'none', border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}
+            >
+              🔒 Lock
+            </button>
           </div>
-        ))}
+          <h1 style={{ margin: '0 0 4px', fontSize: 28, fontWeight: 900, color: TEXT }}>🛠 Admin Panel</h1>
+          <p style={{ margin: 0, color: MUTED, fontSize: 14 }}>Manage Israeli Moto Gymkhana results</p>
+
+          {/* Stats */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <Stat value={pending.length} label="Pending" color={ORANGE} />
+            <Stat value={approved.length} label="Approved" color={GREEN} />
+            <Stat value={data.length} label="Total" color={MUTED} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 12px 80px', maxWidth: 640, margin: '0 auto' }}>
+
+        {/* PENDING */}
+        {pending.length > 0 && (
+          <>
+            <SectionTitle>Pending approval ({pending.length})</SectionTitle>
+            {pending.map(r => (
+              <ResultCard key={r.id} r={r} onApprove={() => approve(r.id)} onDelete={() => remove(r.id)} />
+            ))}
+          </>
+        )}
+
+        {/* APPROVED */}
+        {approved.length > 0 && (
+          <>
+            <SectionTitle style={{ marginTop: pending.length > 0 ? 28 : 0 }}>Approved ({approved.length})</SectionTitle>
+            {approved.map(r => (
+              <ResultCard key={r.id} r={r} onDelete={() => remove(r.id)} />
+            ))}
+          </>
+        )}
+
+        {data.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: MUTED }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+            <div>No submissions yet</div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-const backBtnStyle = {
-  display: 'inline-block',
-  padding: '8px 14px',
-  background: '#1a1a1a',
-  color: '#fff',
-  borderRadius: 8,
-  textDecoration: 'none',
-  border: '1px solid #333',
-  fontSize: 13
+function ResultCard({ r, onApprove, onDelete }) {
+  const date = new Date(r.created_at).toLocaleDateString('en-IL', { day: 'numeric', month: 'short', year: 'numeric' })
+  return (
+    <div style={{
+      background: CARD,
+      borderRadius: 12,
+      marginBottom: 10,
+      border: `1px solid ${BORDER}`,
+      borderLeft: `3px solid ${r.approved ? GREEN : ORANGE}`,
+      overflow: 'hidden',
+    }}>
+      <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+            <span style={{ fontWeight: 700, fontSize: 16, color: TEXT }}>{r.riders?.name}</span>
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+              background: r.approved ? `${GREEN}18` : `${ORANGE}18`,
+              color: r.approved ? GREEN : ORANGE,
+              border: `1px solid ${r.approved ? GREEN + '40' : ORANGE + '40'}`,
+            }}>
+              {r.approved ? '✓ Approved' : '● Pending'}
+            </span>
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginBottom: 2 }}>
+            🏁 {r.map_name}{r.bike ? ` · 🏍 ${r.bike}` : ''}
+          </div>
+          <div style={{ fontSize: 12, color: MUTED }}>
+            {date}
+          </div>
+        </div>
+
+        {/* Time */}
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ color: GREEN, fontWeight: 800, fontSize: 22 }}>
+            {Number(r.lap_time).toFixed(2)}s
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', borderTop: `1px solid ${BORDER}` }}>
+        {!r.approved && (
+          <button
+            onClick={onApprove}
+            style={{
+              flex: 1, padding: '11px 16px', background: `${GREEN}15`,
+              border: 'none', borderRight: `1px solid ${BORDER}`,
+              color: GREEN, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            }}
+          >
+            ✓ Approve
+          </button>
+        )}
+        {r.youtube_url && (
+          <a
+            href={r.youtube_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: 1, padding: '11px 16px', background: 'transparent',
+              borderRight: `1px solid ${BORDER}`,
+              color: MUTED, fontWeight: 600, fontSize: 14, textAlign: 'center', display: 'block',
+            }}
+          >
+            ▶ Video
+          </a>
+        )}
+        <button
+          onClick={onDelete}
+          style={{
+            flex: r.approved && !r.youtube_url ? 1 : 'unset',
+            padding: '11px 16px', background: 'transparent',
+            border: 'none', color: RED, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+          }}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Stat({ value, label, color }) {
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', minWidth: 72 }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+      <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{label}</div>
+    </div>
+  )
+}
+
+function SectionTitle({ children, style }) {
+  return (
+    <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, ...style }}>
+      {children}
+    </div>
+  )
 }

@@ -37,19 +37,27 @@ const BIKES = [
   "custom", "other", "unknown"
 ]
 
+const BG = '#07090f'
+const SURFACE = '#0c1118'
+const CARD = '#101821'
+const BORDER = '#1a2840'
+const GREEN = '#00ff99'
+const BLUE = '#1a5cff'
+const TEXT = '#dce8f4'
+const MUTED = '#7a90a8'
+const RED = '#ff4757'
+const ORANGE = '#ffa502'
+
 export default function Submit() {
   const [form, setForm] = useState({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
 
-  // Rider autocomplete
   const [allRiders, setAllRiders] = useState([])
   const [riderSuggestions, setRiderSuggestions] = useState([])
 
-  // Plate / bike lookup
-  const [plateStatus, setPlateStatus] = useState('idle') // idle | loading | found | new | invalid
+  const [plateStatus, setPlateStatus] = useState('idle')
   const [bikeSearch, setBikeSearch] = useState('')
   const [plateDisplay, setPlateDisplay] = useState('')
 
-  // Map
   const [maps, setMaps] = useState([])
   const [mapSearch, setMapSearch] = useState('')
   const [showMapDropdown, setShowMapDropdown] = useState(false)
@@ -80,23 +88,13 @@ export default function Submit() {
 
   const handlePlateChange = async (e) => {
     const raw = e.target.value
-    if (!/^[\d\s-]*$/.test(raw)) return  // only digits, spaces, dashes
+    if (!/^[\d\s-]*$/.test(raw)) return
     setPlateDisplay(raw)
-
     const digits = raw.replace(/[\s-]/g, '')
     setForm(prev => ({ ...prev, plate: digits, bikeModel: '' }))
     setBikeSearch('')
-
-    if (digits.length < 7) {
-      setPlateStatus(digits.length > 0 ? 'idle' : 'idle')
-      return
-    }
-    if (digits.length > 8) {
-      setPlateStatus('invalid')
-      return
-    }
-
-    // 7 digits (XX-XXX-XX) or 8 digits (XXX-XX-XXX) — auto lookup
+    if (digits.length < 7) { setPlateStatus('idle'); return }
+    if (digits.length > 8) { setPlateStatus('invalid'); return }
     setPlateStatus('loading')
     const { data } = await supabase.from('bikes').select('model').eq('plate', digits).maybeSingle()
     if (data) {
@@ -113,29 +111,23 @@ export default function Submit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
     if (!form.name.trim()) return alert('Please enter your name.')
     if (form.plate.length !== 7 && form.plate.length !== 8) return alert('Please enter a valid plate number (7 or 8 digits).')
     if (plateStatus === 'loading') return alert('Still looking up plate, please wait.')
-    if (plateStatus === 'invalid') return alert('Please enter a valid 8-digit plate number.')
+    if (plateStatus === 'invalid') return alert('Please enter a valid plate number.')
     if (plateStatus === 'new' && !form.bikeModel.trim()) return alert('Please select your bike model.')
     if (!form.map.trim()) return alert('Please select or enter a map.')
     if (!form.time) return alert('Please enter a lap time.')
 
     try {
-      // Register new bike if plate was not found
       if (plateStatus === 'new') {
         const { error } = await supabase.from('bikes').insert([{ plate: form.plate.trim(), model: form.bikeModel.trim() }])
         if (error) { alert('Failed to register bike: ' + error.message); return }
       }
-
-      // Add map if it's new
       if (!maps.includes(form.map.trim())) {
         const { error } = await supabase.from('maps').insert([{ name: form.map.trim() }])
         if (error && error.code !== '23505') { alert('Failed to add map: ' + error.message); return }
       }
-
-      // Find or create rider by name
       let rider
       const { data: existing } = await supabase.from('riders').select('*').eq('name', form.name.trim()).maybeSingle()
       if (existing) {
@@ -148,8 +140,6 @@ export default function Submit() {
         if (error) { alert('Failed to create rider: ' + error.message); return }
         rider = newRider
       }
-
-      // Submit result
       const { error } = await supabase.from('results').insert([{
         rider_id: rider.id,
         map_name: form.map.trim(),
@@ -159,94 +149,124 @@ export default function Submit() {
         approved: false
       }])
       if (error) { alert('Failed to submit result: ' + error.message); return }
-
       alert('🏁 Submitted! Waiting for approval.')
       setForm({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
       setBikeSearch('')
       setMapSearch('')
       setPlateStatus('idle')
-
+      setPlateDisplay('')
     } catch (err) {
       alert('Unexpected error: ' + err.message)
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f0f0f', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Arial', color: 'white', padding: 20 }}>
-      <form onSubmit={handleSubmit} style={{ background: '#1a1a1a', padding: 30, borderRadius: 14, width: 380, border: '1px solid #333' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
 
-        <div style={{ marginBottom: 20 }}>
-          <Link href="/" style={backBtnStyle}>← Back</Link>
+      {/* HEADER */}
+      <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
+        <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px 16px', gap: 12 }}>
+          <Link href="/" style={{ color: MUTED, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+            ← Back
+          </Link>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontWeight: 800, fontSize: 18, color: TEXT }}>Submit Your Run</div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>🏁 Israeli Moto Gymkhana</div>
+          </div>
+          <div style={{ width: 64 }} />
         </div>
+      </div>
 
-        <h1 style={{ textAlign: 'center', fontSize: 28, marginBottom: 6 }}>🏁 Israeli Moto Gymkhana</h1>
-        <p style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginBottom: 20 }}>Enter your best lap time</p>
+      {/* FORM */}
+      <form onSubmit={handleSubmit} style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 80px' }}>
 
         {/* RIDER NAME */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ marginBottom: 20, position: 'relative' }}>
+          <FieldLabel>Rider name</FieldLabel>
           <input
-            placeholder="Rider name"
+            placeholder="Your name in English"
             value={form.name}
             onChange={handleNameChange}
+            autoComplete="name"
             style={inputStyle}
             required
           />
           {riderSuggestions.length > 0 && form.name && (
-            <div style={dropdownStyle}>
+            <DropList>
               {riderSuggestions.map(r => (
-                <div key={r.name} onClick={() => selectRider(r)} style={dropdownItemStyle}>
-                  {r.name}
-                </div>
+                <DropItem key={r.name} onClick={() => selectRider(r)}>{r.name}</DropItem>
               ))}
-            </div>
+            </DropList>
           )}
         </div>
 
-        {/* PLATE — auto-lookup on 8 digits */}
-        <input
-          placeholder="Plate (e.g. 123-45-678 or 12-345-67)"
-          value={plateDisplay}
-          onChange={handlePlateChange}
-          style={{
-            ...inputStyle,
-            borderColor: plateStatus === 'invalid' ? '#ff4444'
-              : plateStatus === 'found' ? '#00ff99'
-              : plateStatus === 'new' ? 'orange'
-              : '#333'
-          }}
-          required
-        />
-        {plateStatus === 'loading' && <p style={{ color: '#aaa', fontSize: 12, marginBottom: 8 }}>Looking up plate...</p>}
-        {plateStatus === 'invalid' && <p style={{ color: '#ff4444', fontSize: 12, marginBottom: 8 }}>Plates are 7 digits (older) or 8 digits (new)</p>}
-        {plateStatus === 'found' && <p style={{ color: '#00ff99', fontSize: 12, marginBottom: 8 }}>✅ Bike found: {form.bikeModel}</p>}
-        {plateStatus === 'new' && <p style={{ color: 'orange', fontSize: 12, marginBottom: 8 }}>⚠️ New plate — select your bike model below</p>}
+        {/* PLATE */}
+        <div style={{ marginBottom: plateStatus !== 'idle' ? 6 : 20 }}>
+          <FieldLabel extra="7 or 8 digits">Plate number</FieldLabel>
+          <input
+            placeholder="e.g. 123-45-678 or 12-345-67"
+            value={plateDisplay}
+            onChange={handlePlateChange}
+            inputMode="numeric"
+            style={{
+              ...inputStyle,
+              marginBottom: 0,
+              borderColor: plateStatus === 'invalid' ? RED
+                : plateStatus === 'found' ? GREEN
+                : plateStatus === 'new' ? ORANGE
+                : BORDER
+            }}
+          />
+        </div>
+        {plateStatus !== 'idle' && (
+          <div style={{ marginBottom: 16 }}>
+            {plateStatus === 'loading' && <StatusBadge color={MUTED}>⏳ Looking up plate...</StatusBadge>}
+            {plateStatus === 'found' && <StatusBadge color={GREEN}>✅ Bike found: {form.bikeModel}</StatusBadge>}
+            {plateStatus === 'new' && <StatusBadge color={ORANGE}>⚠️ New plate — select your bike model below</StatusBadge>}
+            {plateStatus === 'invalid' && <StatusBadge color={RED}>✗ Israeli plates are 7 digits (older) or 8 digits (new)</StatusBadge>}
+          </div>
+        )}
 
-        {/* BIKE MODEL — only shown after plate check */}
+        {/* BIKE MODEL */}
         {(plateStatus === 'found' || plateStatus === 'new') && (
-          <div style={{ position: 'relative', marginBottom: plateStatus === 'new' ? 50 : 10 }}>
+          <div style={{ marginBottom: 20, position: 'relative' }}>
+            <FieldLabel>Bike model</FieldLabel>
             <input
-              placeholder={plateStatus === 'new' ? 'Search bike (e.g. mt07, xsr...)' : 'Bike model'}
+              placeholder={plateStatus === 'new' ? 'Search bike model (e.g. mt07, xsr...)' : ''}
               value={bikeSearch}
-              onChange={(e) => { setBikeSearch(e.target.value); setForm(prev => ({ ...prev, bikeModel: e.target.value })) }}
+              onChange={(e) => {
+                setBikeSearch(e.target.value)
+                setForm(prev => ({ ...prev, bikeModel: e.target.value }))
+              }}
               readOnly={plateStatus === 'found'}
-              style={{ ...inputStyle, marginBottom: 0, background: plateStatus === 'found' ? '#222' : '#111', color: plateStatus === 'found' ? '#888' : 'white' }}
+              style={{
+                ...inputStyle,
+                background: plateStatus === 'found' ? '#0a1020' : CARD,
+                color: plateStatus === 'found' ? MUTED : TEXT,
+                cursor: plateStatus === 'found' ? 'default' : 'text',
+              }}
             />
             {plateStatus === 'new' && bikeSearch && filteredBikes.length > 0 && (
-              <div style={{ ...dropdownStyle, maxHeight: 180, overflowY: 'auto' }}>
+              <DropList maxHeight={200}>
                 {filteredBikes.map(bike => (
-                  <div key={bike} onClick={() => { setBikeSearch(bike); setForm(prev => ({ ...prev, bikeModel: bike })) }} style={dropdownItemStyle}>
+                  <DropItem key={bike} onClick={() => {
+                    setBikeSearch(bike)
+                    setForm(prev => ({ ...prev, bikeModel: bike }))
+                  }}>
                     {bike}
-                  </div>
+                  </DropItem>
                 ))}
-              </div>
+              </DropList>
             )}
           </div>
         )}
 
         {/* MAP */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ marginBottom: 20, position: 'relative' }}>
+          <FieldLabel>Map / Track</FieldLabel>
           <input
-            placeholder="Select or add map / track"
+            placeholder="Select or type a map name"
             value={form.map}
             onFocus={() => setShowMapDropdown(true)}
             onBlur={() => setTimeout(() => setShowMapDropdown(false), 200)}
@@ -261,40 +281,60 @@ export default function Submit() {
             required
           />
           {showMapDropdown && (
-            <div style={{ ...dropdownStyle, zIndex: 9999 }}>
+            <DropList>
               {filteredMaps.map(m => (
-                <div key={m} onClick={() => { setForm(prev => ({ ...prev, map: m })); setMapSearch(m); setShowMapDropdown(false) }} style={dropdownItemStyle}>
+                <DropItem key={m} onClick={() => {
+                  setForm(prev => ({ ...prev, map: m }))
+                  setMapSearch(m)
+                  setShowMapDropdown(false)
+                }}>
                   {m}
-                </div>
+                </DropItem>
               ))}
               {form.map && !maps.includes(form.map.trim()) && form.map.trim() && (
-                <div onClick={() => setShowMapDropdown(false)} style={{ ...dropdownItemStyle, color: '#00ff99' }}>
+                <DropItem color={GREEN} onClick={() => setShowMapDropdown(false)}>
                   ➕ Add new: "{form.map}"
-                </div>
+                </DropItem>
               )}
-            </div>
+            </DropList>
           )}
         </div>
 
         {/* LAP TIME */}
-        <input
-          placeholder="Lap time in seconds (e.g. 68.43)"
-          value={form.time}
-          onChange={(e) => setForm(prev => ({ ...prev, time: e.target.value }))}
-          style={inputStyle}
-          required
-        />
+        <div style={{ marginBottom: 20 }}>
+          <FieldLabel>Lap time</FieldLabel>
+          <input
+            placeholder="Seconds  (e.g. 68.43)"
+            value={form.time}
+            onChange={(e) => setForm(prev => ({ ...prev, time: e.target.value }))}
+            inputMode="decimal"
+            style={inputStyle}
+            required
+          />
+        </div>
 
         {/* YOUTUBE */}
-        <input
-          placeholder="YouTube URL (optional)"
-          value={form.youtube}
-          onChange={(e) => setForm(prev => ({ ...prev, youtube: e.target.value }))}
-          style={inputStyle}
-        />
+        <div style={{ marginBottom: 32 }}>
+          <FieldLabel extra="optional">YouTube URL</FieldLabel>
+          <input
+            placeholder="https://youtube.com/watch?v=..."
+            value={form.youtube}
+            onChange={(e) => setForm(prev => ({ ...prev, youtube: e.target.value }))}
+            type="url"
+            inputMode="url"
+            style={inputStyle}
+          />
+        </div>
 
-        <button type="submit" style={{ width: '100%', marginTop: 15, padding: 12, background: '#00ff99', color: '#000', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 15 }}>
-          Submit Result
+        <button type="submit" style={{
+          width: '100%', padding: '15px 20px',
+          background: GREEN, color: '#000',
+          border: 'none', borderRadius: 12,
+          fontWeight: 800, fontSize: 16, cursor: 'pointer',
+          boxShadow: '0 4px 24px rgba(0,255,153,0.3)',
+          letterSpacing: 0.3,
+        }}>
+          🏁 Submit Run
         </button>
 
       </form>
@@ -302,44 +342,61 @@ export default function Submit() {
   )
 }
 
+function FieldLabel({ children, extra }) {
+  return (
+    <label style={{ display: 'block', marginBottom: 7, fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+      {children}
+      {extra && <span style={{ marginLeft: 6, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{extra}</span>}
+    </label>
+  )
+}
+
+function StatusBadge({ color, children }) {
+  return (
+    <div style={{ fontSize: 13, color, padding: '7px 12px', background: `${color}12`, borderRadius: 8, border: `1px solid ${color}30` }}>
+      {children}
+    </div>
+  )
+}
+
+function DropList({ children, maxHeight }) {
+  return (
+    <div style={{
+      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+      background: '#141e2e', border: `1px solid ${BORDER}`,
+      borderRadius: 10, marginTop: 4,
+      maxHeight: maxHeight || 220, overflowY: 'auto',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function DropItem({ children, onClick, color }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '11px 14px', cursor: 'pointer',
+        borderBottom: `1px solid ${BORDER}`,
+        color: color || TEXT, fontSize: 14,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 const inputStyle = {
   width: '100%',
-  padding: 10,
-  marginBottom: 10,
-  borderRadius: 6,
-  border: '1px solid #333',
-  background: '#111',
-  color: 'white',
+  padding: '12px 14px',
+  marginBottom: 0,
+  borderRadius: 10,
+  border: `1px solid ${BORDER}`,
+  background: CARD,
+  color: TEXT,
   outline: 'none',
-  boxSizing: 'border-box'
-}
-
-const dropdownStyle = {
-  position: 'absolute',
-  top: '100%',
-  left: 0,
-  right: 0,
-  background: '#1a1a1a',
-  border: '1px solid #333',
-  borderRadius: 8,
-  zIndex: 9999,
-}
-
-const dropdownItemStyle = {
-  padding: '10px 12px',
-  cursor: 'pointer',
-  borderBottom: '1px solid #222',
-  color: 'white',
-  fontSize: 13
-}
-
-const backBtnStyle = {
-  display: 'inline-block',
-  padding: '8px 14px',
-  background: '#1a1a1a',
-  color: '#fff',
-  borderRadius: 8,
-  textDecoration: 'none',
-  border: '1px solid #333',
-  fontSize: 13
+  boxSizing: 'border-box',
+  fontSize: 16,
 }
