@@ -306,7 +306,23 @@ export default function Home() {
 
         {/* ── FOOTER ── */}
         <footer style={{ borderTop: `1px solid ${BORDER}`, background: SURFACE, padding: '24px 16px 32px', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+          {/* Training schedule */}
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+            Training Sessions
+          </div>
+          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 6, marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, fontSize: 14 }}>
+              <span style={{ color: MUTED }}>Friday</span>
+              <span style={{ color: TEXT, fontWeight: 600 }}>16:00 – 19:00</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, fontSize: 14 }}>
+              <span style={{ color: MUTED }}>Saturday</span>
+              <span style={{ color: TEXT, fontWeight: 600 }}>10:00 – 13:00</span>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
             Community &amp; Location
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
