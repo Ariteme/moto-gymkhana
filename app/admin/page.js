@@ -19,6 +19,7 @@ export default function Admin() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
   const [data, setData] = useState([])
   const [riders, setRiders] = useState([])
   const [mergeFrom, setMergeFrom] = useState('')
@@ -26,7 +27,10 @@ export default function Admin() {
   const [merging, setMerging] = useState(false)
 
   useEffect(() => {
-    if (sessionStorage.getItem('admin_auth') === '1') setAuthed(true)
+    if (sessionStorage.getItem('admin_auth') === '1') {
+      setAuthed(true)
+      setAdminPassword(sessionStorage.getItem('admin_pw') || '')
+    }
   }, [])
 
   useEffect(() => {
@@ -42,6 +46,8 @@ export default function Admin() {
     })
     if (res.ok) {
       sessionStorage.setItem('admin_auth', '1')
+      sessionStorage.setItem('admin_pw', password)
+      setAdminPassword(password)
       setAuthed(true)
     } else {
       setAuthError(true)
@@ -64,10 +70,13 @@ export default function Admin() {
     const toRider = riders.find(r => r.id === mergeTo)
     if (!confirm(`Merge "${fromRider?.name}" → "${toRider?.name}"?\n\nAll runs from "${fromRider?.name}" will move to "${toRider?.name}", then "${fromRider?.name}" will be deleted. This cannot be undone.`)) return
     setMerging(true)
-    const { error: updateErr } = await supabase.from('results').update({ rider_id: mergeTo }).eq('rider_id', mergeFrom)
-    if (updateErr) { alert('Failed to reassign results: ' + updateErr.message); setMerging(false); return }
-    const { error: deleteErr } = await supabase.from('riders').delete().eq('id', mergeFrom)
-    if (deleteErr) { alert('Failed to delete duplicate rider: ' + deleteErr.message); setMerging(false); return }
+    const res = await fetch('/api/admin-merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, mergeFrom, mergeTo }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Merge failed: ' + json.error); setMerging(false); return }
     setMergeFrom('')
     setMergeTo('')
     setMerging(false)
