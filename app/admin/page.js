@@ -17,8 +17,8 @@ const RED = '#ff4757'
 
 const PREDEFINED_TAGS = {
   'Difficulty': ['Easy', 'Medium', 'Hard'],
-  'Technique': ['Counter Steering', 'Body Work', 'Brake Application', 'Gaze Focus', 'Throttle Control', 'Slow Speed Balance'],
-  'Type': ['Pattern', 'Exercise', 'Full Run Analysis'],
+  'Technique': ['Counter Steering', 'Trail Braking', 'Rear Brake Drag', 'Throttle Control', 'Clutch Control', 'Body Position', 'Counterweighting', 'Gaze Focus', 'Gear Selection', 'Slow Speed Balance'],
+  'Maneuver': ['Slalom', 'Figure Eight', 'Full-Lock Turn', 'Pivot Turn'],
 }
 
 export default function Admin() {
