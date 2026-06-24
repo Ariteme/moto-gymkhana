@@ -68,10 +68,11 @@ export default function Admin() {
 
   /* ── LOGIN SCREEN ── */
   if (!authed) return (
+    <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
     <div style={{
-      minHeight: '100vh', background: BG,
+      maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', boxShadow: '0 0 80px rgba(0,0,0,0.7)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'var(--font-geist-sans, Arial, sans-serif)', padding: 16,
+      padding: 16,
     }}>
       <div style={{ width: '100%', maxWidth: 360 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -117,6 +118,7 @@ export default function Admin() {
         </form>
       </div>
     </div>
+    </div>
   )
 
   /* ── ADMIN PANEL ── */
@@ -124,7 +126,8 @@ export default function Admin() {
   const approved = data.filter(r => r.approved)
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
+    <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
+    <div style={{ maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', color: TEXT, boxShadow: '0 0 80px rgba(0,0,0,0.7)' }}>
 
       {/* HEADER */}
       <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
@@ -182,6 +185,7 @@ export default function Admin() {
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }
