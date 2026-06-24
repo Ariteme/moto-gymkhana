@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useLang, LangSwitcher } from '@/lib/LangContext'
+import { i18n } from '@/lib/i18n'
 
 const BIKES = [
   "yamaha xsr125", "yamaha mt125", "yamaha yzf-r125", "yamaha wr125",
@@ -59,6 +61,8 @@ function levenshtein(a, b) {
 }
 
 export default function Submit() {
+  const { lang } = useLang()
+  const T = i18n[lang]
   const [form, setForm] = useState({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
 
   const [allRiders, setAllRiders] = useState([])
@@ -176,7 +180,7 @@ export default function Submit() {
         approved: false
       }])
       if (error) { alert('Failed to submit result: ' + error.message); return }
-      alert('🏁 Submitted! Waiting for approval.')
+      alert(T.submit_success)
       setForm({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
       setBikeSearch('')
       setMapSearch('')
@@ -196,13 +200,13 @@ export default function Submit() {
         <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
         <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px 16px', gap: 12 }}>
           <Link href="/" style={{ color: MUTED, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
-            ← Back
+            {T.back}
           </Link>
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontWeight: 800, fontSize: 18, color: TEXT }}>Submit Your Run</div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: TEXT }}>{T.submit_title}</div>
             <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>🏁 Israeli Moto Gymkhana</div>
           </div>
-          <div style={{ width: 64 }} />
+          <LangSwitcher />
         </div>
       </div>
 
@@ -211,9 +215,9 @@ export default function Submit() {
 
         {/* RIDER NAME */}
         <div style={{ marginBottom: 20, position: 'relative' }}>
-          <FieldLabel>Rider name</FieldLabel>
+          <FieldLabel>{T.rider_name}</FieldLabel>
           <input
-            placeholder="Your name in English"
+            placeholder={T.rider_name_placeholder}
             value={form.name}
             onChange={handleNameChange}
             autoComplete="name"
@@ -229,24 +233,24 @@ export default function Submit() {
           )}
           {fuzzySuggestions.length > 0 && riderSuggestions.length === 0 && (
             <div style={{ marginTop: 8, padding: '10px 12px', background: `${ORANGE}12`, border: `1px solid ${ORANGE}40`, borderRadius: 10 }}>
-              <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginBottom: 6 }}>⚠️ Did you mean?</div>
+              <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginBottom: 6 }}>{T.did_you_mean}</div>
               {fuzzySuggestions.map(r => (
                 <button key={r.name} onClick={() => selectRider(r)} style={{
                   display: 'block', width: '100%', textAlign: 'left',
                   background: `${ORANGE}18`, border: `1px solid ${ORANGE}50`, borderRadius: 8,
                   color: TEXT, fontSize: 14, padding: '8px 12px', cursor: 'pointer', marginBottom: 4,
                 }}>
-                  {r.name} <span style={{ color: ORANGE, fontSize: 12 }}>— tap to use</span>
+                  {r.name} <span style={{ color: ORANGE, fontSize: 12 }}>{T.tap_to_use}</span>
                 </button>
               ))}
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Only continue typing if this is truly a new person.</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>{T.new_person_hint}</div>
             </div>
           )}
         </div>
 
         {/* PLATE */}
         <div style={{ marginBottom: plateStatus !== 'idle' ? 6 : 20 }}>
-          <FieldLabel extra="7 or 8 digits">Plate number</FieldLabel>
+          <FieldLabel extra={T.plate_hint}>{T.plate_number}</FieldLabel>
           <input
             placeholder="e.g. 123-45-678 or 12-345-67"
             value={plateDisplay}
@@ -264,19 +268,19 @@ export default function Submit() {
         </div>
         {plateStatus !== 'idle' && (
           <div style={{ marginBottom: 16 }}>
-            {plateStatus === 'loading' && <StatusBadge color={MUTED}>⏳ Looking up plate...</StatusBadge>}
-            {plateStatus === 'found' && <StatusBadge color={GREEN}>✅ Bike found: {form.bikeModel}</StatusBadge>}
-            {plateStatus === 'new' && <StatusBadge color={ORANGE}>⚠️ New plate — select your bike model below</StatusBadge>}
-            {plateStatus === 'invalid' && <StatusBadge color={RED}>✗ Israeli plates are 7 digits (older) or 8 digits (new)</StatusBadge>}
+            {plateStatus === 'loading' && <StatusBadge color={MUTED}>{T.plate_loading}</StatusBadge>}
+            {plateStatus === 'found' && <StatusBadge color={GREEN}>{T.plate_found} {form.bikeModel}</StatusBadge>}
+            {plateStatus === 'new' && <StatusBadge color={ORANGE}>{T.plate_new}</StatusBadge>}
+            {plateStatus === 'invalid' && <StatusBadge color={RED}>{T.plate_invalid}</StatusBadge>}
           </div>
         )}
 
         {/* BIKE MODEL */}
         {(plateStatus === 'found' || plateStatus === 'new') && (
           <div style={{ marginBottom: 20, position: 'relative' }}>
-            <FieldLabel>Bike model</FieldLabel>
+            <FieldLabel>{T.bike_model}</FieldLabel>
             <input
-              placeholder={plateStatus === 'new' ? 'Search bike model (e.g. mt07, xsr...)' : ''}
+              placeholder={plateStatus === 'new' ? T.bike_search_placeholder : ''}
               value={bikeSearch}
               onChange={(e) => {
                 setBikeSearch(e.target.value)
@@ -307,9 +311,9 @@ export default function Submit() {
 
         {/* MAP */}
         <div style={{ marginBottom: selectedMapImage ? 12 : 20, position: 'relative' }}>
-          <FieldLabel>Map / Track</FieldLabel>
+          <FieldLabel>{T.map_track}</FieldLabel>
           <input
-            placeholder="Select or type a map name"
+            placeholder={T.map_placeholder}
             value={form.map}
             onFocus={() => setShowMapDropdown(true)}
             onBlur={() => setTimeout(() => setShowMapDropdown(false), 200)}
@@ -343,7 +347,7 @@ export default function Submit() {
               ))}
               {form.map && !mapNames.includes(form.map.trim()) && form.map.trim() && (
                 <DropItem color={GREEN} onClick={() => setShowMapDropdown(false)}>
-                  ➕ Add new: "{form.map}"
+                  {T.add_new_map} "{form.map}"
                 </DropItem>
               )}
             </DropList>
@@ -363,16 +367,16 @@ export default function Submit() {
               priority
             />
             <div style={{ padding: '8px 12px', fontSize: 12, color: MUTED, background: CARD, borderTop: `1px solid ${BORDER}` }}>
-              🏁 {form.map} — course layout
+              🏁 {form.map} — {T.course_layout}
             </div>
           </div>
         )}
 
         {/* LAP TIME */}
         <div style={{ marginBottom: 20 }}>
-          <FieldLabel>Lap time</FieldLabel>
+          <FieldLabel>{T.lap_time}</FieldLabel>
           <input
-            placeholder="Seconds  (e.g. 68.43)"
+            placeholder={T.lap_time_placeholder}
             value={form.time}
             onChange={(e) => setForm(prev => ({ ...prev, time: e.target.value }))}
             inputMode="decimal"
@@ -383,7 +387,7 @@ export default function Submit() {
 
         {/* YOUTUBE */}
         <div style={{ marginBottom: 32 }}>
-          <FieldLabel extra="optional">YouTube URL</FieldLabel>
+          <FieldLabel extra={T.optional}>{T.youtube_url}</FieldLabel>
           <input
             placeholder="https://youtube.com/watch?v=..."
             value={form.youtube}
@@ -402,7 +406,7 @@ export default function Submit() {
           boxShadow: '0 4px 24px rgba(0,255,153,0.3)',
           letterSpacing: 0.3,
         }}>
-          🏁 Submit Run
+          {T.submit_btn}
         </button>
 
       </form>

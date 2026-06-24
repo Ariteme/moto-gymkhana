@@ -9,13 +9,13 @@ function adminClient() {
 }
 
 export async function POST(request) {
-  const { password, youtube_url, title, description, tags } = await request.json()
+  const { password, youtube_url, title, description, title_ru, description_ru, tags } = await request.json()
   if (!password || password !== process.env.ADMIN_PASSWORD)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data, error } = await adminClient()
     .from('training_videos')
-    .insert([{ youtube_url, title, description: description || '', tags: tags || [] }])
+    .insert([{ youtube_url, title, description: description || '', title_ru: title_ru || '', description_ru: description_ru || '', tags: tags || [] }])
     .select()
     .single()
 
@@ -24,13 +24,13 @@ export async function POST(request) {
 }
 
 export async function PATCH(request) {
-  const { password, id, youtube_url, title, description, tags } = await request.json()
+  const { password, id, youtube_url, title, description, title_ru, description_ru, tags } = await request.json()
   if (!password || password !== process.env.ADMIN_PASSWORD)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { error } = await adminClient()
     .from('training_videos')
-    .update({ youtube_url, title, description: description || '', tags: tags || [] })
+    .update({ youtube_url, title, description: description || '', title_ru: title_ru || '', description_ru: description_ru || '', tags: tags || [] })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -33,7 +33,7 @@ export default function Admin() {
 
   // Training tab
   const [trainingVideos, setTrainingVideos] = useState([])
-  const [tvForm, setTvForm] = useState({ youtube_url: '', title: '', description: '', tags: [] })
+  const [tvForm, setTvForm] = useState({ youtube_url: '', title: '', description: '', title_ru: '', description_ru: '', tags: [] })
   const [tvSaving, setTvSaving] = useState(false)
   const [customTag, setCustomTag] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -128,7 +128,7 @@ export default function Admin() {
     })
     const json = await res.json()
     if (!res.ok) { alert('Failed: ' + json.error); setTvSaving(false); return }
-    setTvForm({ youtube_url: '', title: '', description: '', tags: [] })
+    setTvForm({ youtube_url: '', title: '', description: '', title_ru: '', description_ru: '', tags: [] })
     setCustomTag('')
     setTvSaving(false)
     await fetchAll()
@@ -289,6 +289,14 @@ export default function Admin() {
                 <input value={tvForm.description} onChange={e => setTvForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Short description" style={inputSt} />
               </Field>
+              <Field label="Title (Russian)">
+                <input value={tvForm.title_ru} onChange={e => setTvForm(p => ({ ...p, title_ru: e.target.value }))}
+                  placeholder="Название на русском" style={inputSt} />
+              </Field>
+              <Field label="Description (Russian)">
+                <textarea value={tvForm.description_ru} onChange={e => setTvForm(p => ({ ...p, description_ru: e.target.value }))}
+                  placeholder="Описание на русском" rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
+              </Field>
               <TagPicker
                 form={tvForm} setForm={setTvForm}
                 customTag={customTag} setCustomTag={setCustomTag}
@@ -323,6 +331,14 @@ export default function Admin() {
                       <Field label="Description">
                         <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
                           rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
+                      </Field>
+                      <Field label="Title (Russian)">
+                        <input value={editForm.title_ru || ''} onChange={e => setEditForm(p => ({ ...p, title_ru: e.target.value }))}
+                          placeholder="Название на русском" style={inputSt} />
+                      </Field>
+                      <Field label="Description (Russian)">
+                        <textarea value={editForm.description_ru || ''} onChange={e => setEditForm(p => ({ ...p, description_ru: e.target.value }))}
+                          placeholder="Описание на русском" rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
                       </Field>
                       <TagPicker
                         form={editForm} setForm={setEditForm}
@@ -363,7 +379,7 @@ export default function Admin() {
                           style={{ flex: 1, padding: '10px 14px', color: MUTED, fontSize: 13, textAlign: 'center', borderRight: `1px solid ${BORDER}` }}>
                           ▶ Watch
                         </a>
-                        <button onClick={() => { setEditingId(v.id); setEditForm({ youtube_url: v.youtube_url, title: v.title, description: v.description || '', tags: [...(v.tags || [])] }) }}
+                        <button onClick={() => { setEditingId(v.id); setEditForm({ youtube_url: v.youtube_url, title: v.title, description: v.description || '', title_ru: v.title_ru || '', description_ru: v.description_ru || '', tags: [...(v.tags || [])] }) }}
                           style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: BLUE, fontSize: 13, cursor: 'pointer' }}>
                           ✏️ Edit
                         </button>

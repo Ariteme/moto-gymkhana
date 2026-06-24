@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useLang, LangSwitcher } from '@/lib/LangContext'
+import { i18n } from '@/lib/i18n'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -18,6 +20,9 @@ const SILVER = '#b8c8d4'
 const BRONZE = '#cd8b4e'
 
 export default function Home() {
+  const { lang } = useLang()
+  const T = i18n[lang]
+
   const [data, setData] = useState([])
   const [dbMaps, setDbMaps] = useState([])
   const [mapFilter, setMapFilter] = useState('')
@@ -79,46 +84,44 @@ export default function Home() {
   const togglePodium = (name) => setExpandedPodiums(prev => ({ ...prev, [name]: !prev[name] }))
 
   return (
-    /* Outer: dark canvas on wide screens */
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
-
-      {/* Centered content column */}
       <div style={{ maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', color: TEXT, boxShadow: '0 0 80px rgba(0,0,0,0.7)' }}>
 
-        {/* ── HEADER ── */}
+        {/* HEADER */}
         <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
-          <div style={{ textAlign: 'center', padding: '20px 16px 22px' }}>
+          <div style={{ textAlign: 'center', padding: '20px 16px 22px', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 16, right: 16 }}>
+              <LangSwitcher />
+            </div>
             <div style={{ color: BLUE, fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-              🇮🇱&nbsp;&nbsp;Israel
+              {T.israel}
             </div>
             <h1 style={{ margin: '0 0 5px', fontSize: 'clamp(26px, 5vw, 36px)', fontWeight: 900, color: TEXT, letterSpacing: -1 }}>
               Moto Gymkhana
             </h1>
-            <p style={{ margin: '0 0 22px', color: MUTED, fontSize: 14 }}>
-              Live competition leaderboard
-            </p>
+            <p style={{ margin: '0 0 22px', color: MUTED, fontSize: 14 }}>{T.tagline}</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="/submit" style={{ padding: '11px 22px', background: GREEN, color: '#000', borderRadius: 10, fontWeight: 700, fontSize: 14, boxShadow: '0 0 24px rgba(0,255,153,0.3)' }}>
-                ➕ Submit Run
+                {T.submit_run}
               </Link>
               <Link href="/training" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
-                🏋️ Training
+                {T.training}
               </Link>
               <Link href="/news" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
-                📰 News
+                {T.news}
               </Link>
               <Link href="/admin" style={{ padding: '11px 22px', background: 'transparent', color: MUTED, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
-                🛠 Admin
+                {T.admin}
               </Link>
             </div>
           </div>
         </div>
 
-        {/* ── FILTERS ── */}
+        {/* FILTERS */}
         <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, padding: '12px 14px 8px' }}>
           <FilterRow>
-            <Chip label="All Maps" icon="🏁" active={!mapFilter} onClick={() => setMapFilter('')} />
+            <Chip label={T.all_maps} icon="🏁" active={!mapFilter} onClick={() => setMapFilter('')} />
             {(showAllMaps ? maps : maps.slice(0, 3)).map(m => (
               <Chip key={m} label={m} active={mapFilter === m} onClick={() => setMapFilter(m)} />
             ))}
@@ -127,7 +130,7 @@ export default function Home() {
             )}
           </FilterRow>
           <FilterRow>
-            <Chip label="All Bikes" icon="🏍" active={!bikeFilter} onClick={() => setBikeFilter('')} />
+            <Chip label={T.all_bikes} icon="🏍" active={!bikeFilter} onClick={() => setBikeFilter('')} />
             {(showAllBikes ? bikes : bikes.slice(0, 2)).map(b => (
               <Chip key={b} label={b} active={bikeFilter === b} onClick={() => setBikeFilter(b)} />
             ))}
@@ -136,7 +139,7 @@ export default function Home() {
             )}
           </FilterRow>
           <FilterRow style={{ marginBottom: 0 }}>
-            <Chip label="All Riders" icon="👤" active={!riderFilter} onClick={() => setRiderFilter('')} />
+            <Chip label={T.all_riders} icon="👤" active={!riderFilter} onClick={() => setRiderFilter('')} />
             {(showAllRiders ? riders : riders.slice(0, 2)).map(r => (
               <Chip key={r} label={r} active={riderFilter === r} onClick={() => setRiderFilter(r)} />
             ))}
@@ -146,12 +149,12 @@ export default function Home() {
           </FilterRow>
           {hasFilters && (
             <button onClick={() => { setMapFilter(''); setBikeFilter(''); setRiderFilter('') }} style={{ marginTop: 8, background: 'none', border: 'none', color: '#ff6b6b', fontSize: 12, cursor: 'pointer', padding: '4px 0', display: 'block' }}>
-              ✕ Clear filters
+              {T.clear_filters}
             </button>
           )}
         </div>
 
-        {/* ── PER-MAP SECTIONS ── */}
+        {/* PER-MAP SECTIONS */}
         {podiumMaps.map(mapName => {
           const top3 = filteredData.filter(r => r.map_name === mapName).slice(0, 3)
           if (top3.length === 0) return null
@@ -170,7 +173,6 @@ export default function Home() {
 
           return (
             <div key={mapName} style={{ borderBottom: `1px solid ${BORDER}` }}>
-              {/* Section header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 14px' }}>
                 <div style={{ flex: 1, fontWeight: 700, fontSize: 15, color: TEXT }}>🏁 {mapName}</div>
                 {mapImage && (
@@ -179,24 +181,16 @@ export default function Home() {
                 <ToggleBtn active={podiumOpen} onClick={() => togglePodium(mapName)}>🏆 Podium</ToggleBtn>
               </div>
 
-              {/* Collapsible: course map */}
               {mapOpen && mapImage && (
                 <div style={{ padding: '0 14px 14px' }}>
                   <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-                    <Image
-                      src={mapImage}
-                      alt={`${mapName} course layout`}
-                      width={800}
-                      height={600}
+                    <Image src={mapImage} alt={`${mapName} course layout`} width={800} height={600}
                       style={{ width: '100%', height: 'auto', display: 'block' }}
-                      sizes="(max-width: 700px) calc(100vw - 28px), 658px"
-                      priority={!!mapFilter}
-                    />
+                      sizes="(max-width: 700px) calc(100vw - 28px), 658px" priority={!!mapFilter} />
                   </div>
                 </div>
               )}
 
-              {/* Collapsible: podium */}
               {podiumOpen && (
                 <div style={{ padding: '0 14px 18px' }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 8 }}>
@@ -223,7 +217,7 @@ export default function Home() {
                               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                               borderRadius: 6, color: MUTED, fontSize: 11, cursor: 'pointer',
                             }}>
-                              ▶ Watch run
+                              {T.watch_run}
                             </button>
                           )}
                         </div>
@@ -236,42 +230,29 @@ export default function Home() {
           )
         })}
 
-        {/* ── RESULTS FEED ── */}
+        {/* RESULTS FEED */}
         <div style={{ padding: '16px 14px 32px' }}>
           {filteredData.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>
               <div style={{ fontSize: 52, marginBottom: 14 }}>🏁</div>
-              <div style={{ fontSize: 17, marginBottom: 8, color: TEXT }}>No results yet</div>
-              <Link href="/submit" style={{ color: GREEN, fontSize: 14 }}>Be the first to submit a run →</Link>
+              <div style={{ fontSize: 17, marginBottom: 8, color: TEXT }}>{T.no_results}</div>
+              <Link href="/submit" style={{ color: GREEN, fontSize: 14 }}>{T.first_submit}</Link>
             </div>
           ) : (
             <>
               <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-                All runs · {filteredData.length} total
+                {T.all_runs} · {filteredData.length} {T.total}
               </div>
               {filteredData.map((r, i) => {
                 const videoId = ytId(r.youtube_url)
                 const rankColor = i === 0 ? GOLD : i === 1 ? SILVER : i === 2 ? BRONZE : null
 
                 return videoId ? (
-                  /* Video card */
-                  <div key={r.id} style={{
-                    background: CARD, borderRadius: 14, marginBottom: 10,
-                    overflow: 'hidden',
-                    border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`,
-                  }}>
+                  <div key={r.id} style={{ background: CARD, borderRadius: 14, marginBottom: 10, overflow: 'hidden', border: `1px solid ${rankColor ? rankColor + '40' : BORDER}` }}>
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setModalVideo(videoId)}>
-                      <img
-                        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                        style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
-                        alt="Run video"
-                      />
+                      <img src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} alt="Run video" />
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.72) 100%)' }} />
-                      <div style={{
-                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -60%)',
-                        width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.9)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -60%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid #000', marginLeft: 4 }} />
                       </div>
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 12px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -288,13 +269,7 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  /* Info card (no video) */
-                  <div key={r.id} style={{
-                    background: CARD, borderRadius: 12, padding: '13px 14px', marginBottom: 8,
-                    border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`,
-                    borderLeft: `3px solid ${rankColor || BORDER}`,
-                    display: 'flex', alignItems: 'center', gap: 12,
-                  }}>
+                  <div key={r.id} style={{ background: CARD, borderRadius: 12, padding: '13px 14px', marginBottom: 8, border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`, borderLeft: `3px solid ${rankColor || BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <RankBadge rank={i + 1} color={rankColor} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{r.riders?.name}</Link>
@@ -311,48 +286,33 @@ export default function Home() {
           )}
         </div>
 
-        {/* ── FOOTER ── */}
+        {/* FOOTER */}
         <footer style={{ borderTop: `1px solid ${BORDER}`, background: SURFACE, padding: '24px 16px 32px', textAlign: 'center' }}>
-          {/* Training schedule */}
-          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-            Training Sessions
-          </div>
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{T.training_sessions}</div>
           <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 6, marginBottom: 24, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, fontSize: 14 }}>
-              <span style={{ color: MUTED }}>Friday</span>
+              <span style={{ color: MUTED }}>{T.friday}</span>
               <span style={{ color: TEXT, fontWeight: 600 }}>16:00 – 19:00</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, fontSize: 14 }}>
-              <span style={{ color: MUTED }}>Saturday</span>
+              <span style={{ color: MUTED }}>{T.saturday}</span>
               <span style={{ color: TEXT, fontWeight: 600 }}>10:00 – 13:00</span>
             </div>
           </div>
-
-          {/* Links */}
-          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-            Community &amp; Location
-          </div>
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{T.community}</div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
             <FooterLink href="https://waze.com/ul/hsvbbd1mrv" label="📍 Hadera Rekevet" accent />
             <FooterLink href="https://www.facebook.com/groups/1413998699183513/?ref=share&mibextid=NSMWBT" label="👥 Facebook Group" />
             <FooterLink href="https://www.instagram.com/ariteme" label="📸 Instagram" />
             <FooterLink href="https://wa.me/972547263700?text=Hi%2C+I%27d+like+to+join+the+Moto+Gymkhana+WhatsApp+group" label="💬 Join WhatsApp" />
           </div>
-          <div style={{ fontSize: 12, color: '#2a3a52', letterSpacing: 1 }}>
-            🏁 Israeli Moto Gymkhana
-          </div>
+          <div style={{ fontSize: 12, color: '#2a3a52', letterSpacing: 1 }}>🏁 Israeli Moto Gymkhana</div>
         </footer>
+      </div>
 
-      </div>{/* end content column */}
-
-      {/* ── VIDEO MODAL ── */}
+      {/* VIDEO MODAL */}
       {modalVideo && (
-        <div onClick={() => setModalVideo(null)} style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.94)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, padding: 16,
-        }}>
+        <div onClick={() => setModalVideo(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 900, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}>
             <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${modalVideo}?autoplay=1`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{ border: 'none', display: 'block' }} />
           </div>
@@ -364,13 +324,7 @@ export default function Home() {
 
 function RankBadge({ rank, color, small }) {
   return (
-    <div style={{
-      width: small ? 26 : 34, height: small ? 26 : 34, borderRadius: small ? 6 : 9, flexShrink: 0,
-      background: color ? `${color}20` : '#ffffff08',
-      border: `1px solid ${color ? color + '55' : '#ffffff10'}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontWeight: 800, fontSize: small ? 11 : 14, color: color || MUTED,
-    }}>
+    <div style={{ width: small ? 26 : 34, height: small ? 26 : 34, borderRadius: small ? 6 : 9, flexShrink: 0, background: color ? `${color}20` : '#ffffff08', border: `1px solid ${color ? color + '55' : '#ffffff10'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: small ? 11 : 14, color: color || MUTED }}>
       {rank}
     </div>
   )
@@ -378,43 +332,19 @@ function RankBadge({ rank, color, small }) {
 
 function ToggleBtn({ active, onClick, children }) {
   return (
-    <button onClick={onClick} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '6px 12px', height: 34, borderRadius: 8,
-      border: `1px solid ${active ? GREEN : BORDER}`,
-      background: active ? 'rgba(0,255,153,0.1)' : 'transparent',
-      color: active ? GREEN : MUTED,
-      cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap',
-    }}>
+    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 12px', height: 34, borderRadius: 8, border: `1px solid ${active ? GREEN : BORDER}`, background: active ? 'rgba(0,255,153,0.1)' : 'transparent', color: active ? GREEN : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap' }}>
       {children} {active ? '▲' : '▼'}
     </button>
   )
 }
 
 function FilterRow({ children, style }) {
-  return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, ...style }}>
-      {children}
-    </div>
-  )
+  return <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, ...style }}>{children}</div>
 }
 
 function FooterLink({ href, label, accent }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '9px 16px', borderRadius: 10,
-        background: accent ? 'rgba(0,255,153,0.08)' : CARD,
-        border: `1px solid ${accent ? GREEN + '50' : BORDER}`,
-        color: accent ? GREEN : TEXT,
-        fontSize: 13, fontWeight: 500,
-        textDecoration: 'none',
-      }}
-    >
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, background: accent ? 'rgba(0,255,153,0.08)' : CARD, border: `1px solid ${accent ? GREEN + '50' : BORDER}`, color: accent ? GREEN : TEXT, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
       {label}
     </a>
   )
@@ -422,14 +352,7 @@ function FooterLink({ href, label, accent }) {
 
 function Chip({ label, icon, active, onClick }) {
   return (
-    <button onClick={onClick} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '5px 12px', height: 30, borderRadius: 20,
-      border: `1px solid ${active ? GREEN : BORDER}`,
-      background: active ? 'rgba(0,255,153,0.12)' : 'transparent',
-      color: active ? GREEN : MUTED,
-      cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap',
-    }}>
+    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', height: 30, borderRadius: 20, border: `1px solid ${active ? GREEN : BORDER}`, background: active ? 'rgba(0,255,153,0.12)' : 'transparent', color: active ? GREEN : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap' }}>
       {icon && <span style={{ marginRight: 2 }}>{icon}</span>}
       {label}
     </button>
