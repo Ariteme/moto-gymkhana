@@ -42,3 +42,6 @@ next-env.d.ts
 node_modules
 .next
 .env.local
+
+# local MCP config (contains secrets)
+.mcp.json

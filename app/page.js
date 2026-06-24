@@ -206,9 +206,9 @@ export default function Home() {
                           boxShadow: `0 0 28px ${medal.glow}`,
                         }}>
                           <div style={{ fontSize: first ? 34 : 26, lineHeight: 1 }}>{medal.emoji}</div>
-                          <div style={{ fontWeight: 700, fontSize: 13, marginTop: 6, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 13, marginTop: 6, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>
                             {r.riders?.name}
-                          </div>
+                          </Link>
                           <div style={{ color: medal.color, fontSize: first ? 20 : 17, fontWeight: 800, marginTop: 3 }}>
                             {Number(r.lap_time).toFixed(2)}s
                           </div>
@@ -273,7 +273,7 @@ export default function Home() {
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 12px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <RankBadge rank={i + 1} color={rankColor} small />
-                          <span style={{ fontWeight: 700, fontSize: 15, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{r.riders?.name}</span>
+                          <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 15, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', textDecoration: 'none' }}>{r.riders?.name}</Link>
                         </div>
                         <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
                       </div>
@@ -293,7 +293,7 @@ export default function Home() {
                   }}>
                     <RankBadge rank={i + 1} color={rankColor} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.riders?.name}</div>
+                      <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{r.riders?.name}</Link>
                       <div style={{ fontSize: 12, color: MUTED, marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <span>🏁 {r.map_name}</span>
                         {r.bike && <span>🏍 {r.bike}</span>}

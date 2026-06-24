@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: '#07090f',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Israel Moto Gymkhana Leaderboard",
   description: "Live lap time leaderboard for Moto Gymkhana competitions in Israel. Track riders, maps, bikes and video runs.",
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'MotoGymkhana',
+  },
   openGraph: {
     title: "Israel Moto Gymkhana Leaderboard",
     description: "Live lap time leaderboard for Moto Gymkhana competitions in Israel.",
