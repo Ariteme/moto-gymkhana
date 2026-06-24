@@ -20,6 +20,10 @@ export default function Admin() {
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState(false)
   const [data, setData] = useState([])
+  const [riders, setRiders] = useState([])
+  const [mergeFrom, setMergeFrom] = useState('')
+  const [mergeTo, setMergeTo] = useState('')
+  const [merging, setMerging] = useState(false)
 
   useEffect(() => {
     if (sessionStorage.getItem('admin_auth') === '1') setAuthed(true)
@@ -46,11 +50,29 @@ export default function Admin() {
   }
 
   const fetchData = async () => {
-    const { data } = await supabase
-      .from('results')
-      .select('id, map_name, lap_time, bike, youtube_url, approved, created_at, riders(name)')
-      .order('created_at', { ascending: false })
-    setData(data || [])
+    const [{ data: results }, { data: riderRows }] = await Promise.all([
+      supabase.from('results').select('id, map_name, lap_time, bike, youtube_url, approved, created_at, riders(name, id)').order('created_at', { ascending: false }),
+      supabase.from('riders').select('id, name').order('name'),
+    ])
+    setData(results || [])
+    setRiders(riderRows || [])
+  }
+
+  const mergeRiders = async () => {
+    if (!mergeFrom || !mergeTo || mergeFrom === mergeTo) return
+    const fromRider = riders.find(r => r.id === mergeFrom)
+    const toRider = riders.find(r => r.id === mergeTo)
+    if (!confirm(`Merge "${fromRider?.name}" → "${toRider?.name}"?\n\nAll runs from "${fromRider?.name}" will move to "${toRider?.name}", then "${fromRider?.name}" will be deleted. This cannot be undone.`)) return
+    setMerging(true)
+    const { error: updateErr } = await supabase.from('results').update({ rider_id: mergeTo }).eq('rider_id', mergeFrom)
+    if (updateErr) { alert('Failed to reassign results: ' + updateErr.message); setMerging(false); return }
+    const { error: deleteErr } = await supabase.from('riders').delete().eq('id', mergeFrom)
+    if (deleteErr) { alert('Failed to delete duplicate rider: ' + deleteErr.message); setMerging(false); return }
+    setMergeFrom('')
+    setMergeTo('')
+    setMerging(false)
+    await fetchData()
+    alert(`✓ Merged! "${fromRider?.name}" absorbed into "${toRider?.name}".`)
   }
 
   const approve = async (id) => {
@@ -182,6 +204,58 @@ export default function Admin() {
           <div style={{ textAlign: 'center', padding: '60px 20px', color: MUTED }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
             <div>No submissions yet</div>
+          </div>
+        )}
+
+        {/* MERGE RIDERS */}
+        {riders.length >= 2 && (
+          <div style={{ marginTop: 36 }}>
+            <SectionTitle>Merge duplicate riders</SectionTitle>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
+              <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
+                Moves all runs from the duplicate to the correct rider, then deletes the duplicate.
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Duplicate (delete after)</label>
+                <select
+                  value={mergeFrom}
+                  onChange={e => setMergeFrom(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', background: BG, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 15, outline: 'none' }}
+                >
+                  <option value="">— select rider to remove —</option>
+                  {riders.filter(r => r.id !== mergeTo).map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Keep (correct name)</label>
+                <select
+                  value={mergeTo}
+                  onChange={e => setMergeTo(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', background: BG, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 15, outline: 'none' }}
+                >
+                  <option value="">— select rider to keep —</option>
+                  {riders.filter(r => r.id !== mergeFrom).map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={mergeRiders}
+                disabled={!mergeFrom || !mergeTo || mergeFrom === mergeTo || merging}
+                style={{
+                  width: '100%', padding: '12px 16px',
+                  background: mergeFrom && mergeTo && mergeFrom !== mergeTo ? `${ORANGE}20` : '#ffffff08',
+                  border: `1px solid ${mergeFrom && mergeTo ? ORANGE : BORDER}`,
+                  borderRadius: 10, color: mergeFrom && mergeTo ? ORANGE : MUTED,
+                  fontWeight: 700, fontSize: 14, cursor: mergeFrom && mergeTo ? 'pointer' : 'default',
+                  opacity: merging ? 0.5 : 1,
+                }}
+              >
+                {merging ? 'Merging...' : '🔀 Merge riders'}
+              </button>
+            </div>
           </div>
         )}
       </div>

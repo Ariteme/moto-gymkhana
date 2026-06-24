@@ -49,11 +49,21 @@ const MUTED = '#7a90a8'
 const RED = '#ff4757'
 const ORANGE = '#ffa502'
 
+function levenshtein(a, b) {
+  const m = a.length, n = b.length
+  const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0))
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
+  return dp[m][n]
+}
+
 export default function Submit() {
   const [form, setForm] = useState({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
 
   const [allRiders, setAllRiders] = useState([])
   const [riderSuggestions, setRiderSuggestions] = useState([])
+  const [fuzzySuggestions, setFuzzySuggestions] = useState([])
 
   const [plateStatus, setPlateStatus] = useState('idle')
   const [bikeSearch, setBikeSearch] = useState('')
@@ -79,12 +89,26 @@ export default function Submit() {
     const value = e.target.value
     if (!/^[A-Za-z0-9\s]*$/.test(value)) { alert('Please use English characters only.'); return }
     setForm(prev => ({ ...prev, name: value }))
-    setRiderSuggestions(value ? allRiders.filter(r => r.name.toLowerCase().includes(value.toLowerCase())) : [])
+    if (!value) { setRiderSuggestions([]); setFuzzySuggestions([]); return }
+    const v = value.toLowerCase().trim()
+    const exact = allRiders.filter(r => r.name.toLowerCase().includes(v))
+    setRiderSuggestions(exact)
+    if (v.length >= 4) {
+      const fuzzy = allRiders.filter(r => {
+        const rn = r.name.toLowerCase()
+        if (rn.includes(v) || v.includes(rn)) return false
+        return levenshtein(v, rn) / Math.max(v.length, rn.length) < 0.45
+      })
+      setFuzzySuggestions(fuzzy)
+    } else {
+      setFuzzySuggestions([])
+    }
   }
 
   const selectRider = (rider) => {
     setForm(prev => ({ ...prev, name: rider.name }))
     setRiderSuggestions([])
+    setFuzzySuggestions([])
   }
 
   const handlePlateChange = async (e) => {
@@ -202,6 +226,21 @@ export default function Submit() {
                 <DropItem key={r.name} onClick={() => selectRider(r)}>{r.name}</DropItem>
               ))}
             </DropList>
+          )}
+          {fuzzySuggestions.length > 0 && riderSuggestions.length === 0 && (
+            <div style={{ marginTop: 8, padding: '10px 12px', background: `${ORANGE}12`, border: `1px solid ${ORANGE}40`, borderRadius: 10 }}>
+              <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginBottom: 6 }}>⚠️ Did you mean?</div>
+              {fuzzySuggestions.map(r => (
+                <button key={r.name} onClick={() => selectRider(r)} style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  background: `${ORANGE}18`, border: `1px solid ${ORANGE}50`, borderRadius: 8,
+                  color: TEXT, fontSize: 14, padding: '8px 12px', cursor: 'pointer', marginBottom: 4,
+                }}>
+                  {r.name} <span style={{ color: ORANGE, fontSize: 12 }}>— tap to use</span>
+                </button>
+              ))}
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Only continue typing if this is truly a new person.</div>
+            </div>
           )}
         </div>
 
