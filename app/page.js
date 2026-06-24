@@ -58,11 +58,6 @@ export default function Home() {
 
   const hasFilters = mapFilter || bikeFilter || riderFilter
 
-  // Active map image from DB
-  const activeMapImage = mapFilter
-    ? dbMaps.find(m => m.name === mapFilter)?.image_url
-    : null
-
   function ytId(url) {
     if (!url) return null
     if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
@@ -147,33 +142,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* MAP SCHEMA — shown when a specific map is selected */}
-      {activeMapImage && (
-        <div style={{ padding: '16px 12px 0' }}>
-          <div style={{
-            borderRadius: 14,
-            overflow: 'hidden',
-            border: `1px solid ${BORDER}`,
-            background: CARD,
-            maxWidth: 500,
-            margin: '0 auto',
-          }}>
-            <Image
-              src={activeMapImage}
-              alt={`${mapFilter} course map`}
-              width={800}
-              height={600}
-              style={{ width: '100%', height: 'auto', display: 'block' }}
-              sizes="(max-width: 600px) 100vw, 500px"
-              priority
-            />
-            <div style={{ padding: '10px 14px', fontSize: 12, color: MUTED, borderTop: `1px solid ${BORDER}` }}>
-              🏁 {mapFilter} — course layout
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* PODIUM */}
       {filteredData.length > 0 && podiumMaps.length > 0 && (
         <div style={{ padding: '22px 16px 8px' }}>
@@ -191,23 +159,25 @@ export default function Home() {
             const mapImage = dbMaps.find(m => m.name === mapName)?.image_url
 
             return (
-              <div key={mapName} style={{ marginBottom: 22 }}>
+              <div key={mapName} style={{ marginBottom: 28 }}>
+                {/* Map name header */}
                 {podiumMaps.length > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                    {mapImage && (
-                      <div style={{ width: 48, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: `1px solid ${BORDER}` }}>
-                        <Image
-                          src={mapImage}
-                          alt={mapName}
-                          width={96}
-                          height={72}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ fontSize: 11, color: MUTED, letterSpacing: 3, textTransform: 'uppercase' }}>
-                      {mapName}
-                    </div>
+                  <div style={{ fontSize: 11, color: MUTED, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
+                    — {mapName} —
+                  </div>
+                )}
+
+                {/* Full course schema image */}
+                {mapImage && (
+                  <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 14 }}>
+                    <Image
+                      src={mapImage}
+                      alt={`${mapName} course map`}
+                      width={800}
+                      height={600}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                      sizes="(max-width: 600px) 100vw, 500px"
+                    />
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 8 }}>
