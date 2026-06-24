@@ -35,6 +35,10 @@ export default function Admin() {
   const [trainingVideos, setTrainingVideos] = useState([])
   const [tvForm, setTvForm] = useState({ youtube_url: '', title: '', description: '', tags: [] })
   const [tvSaving, setTvSaving] = useState(false)
+  const [customTag, setCustomTag] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState(null)
+  const [editCustomTag, setEditCustomTag] = useState('')
 
   // Tools tab
   const [riders, setRiders] = useState([])
@@ -113,13 +117,6 @@ export default function Admin() {
     alert(`✓ Merged! "${fromRider?.name}" absorbed into "${toRider?.name}".`)
   }
 
-  const toggleTag = (tag) => {
-    setTvForm(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag]
-    }))
-  }
-
   const addTrainingVideo = async (e) => {
     e.preventDefault()
     if (!tvForm.youtube_url.trim() || !tvForm.title.trim()) return alert('URL and title are required.')
@@ -132,7 +129,21 @@ export default function Admin() {
     const json = await res.json()
     if (!res.ok) { alert('Failed: ' + json.error); setTvSaving(false); return }
     setTvForm({ youtube_url: '', title: '', description: '', tags: [] })
+    setCustomTag('')
     setTvSaving(false)
+    await fetchAll()
+  }
+
+  const saveEditVideo = async () => {
+    if (!editForm.youtube_url.trim() || !editForm.title.trim()) return alert('URL and title are required.')
+    const res = await fetch('/api/admin-training', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, id: editingId, ...editForm }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Failed: ' + json.error); return }
+    setEditingId(null); setEditForm(null); setEditCustomTag('')
     await fetchAll()
   }
 
@@ -145,7 +156,15 @@ export default function Admin() {
     })
     const json = await res.json()
     if (!res.ok) { alert('Failed: ' + json.error); return }
+    if (editingId === id) { setEditingId(null); setEditForm(null) }
     await fetchAll()
+  }
+
+  const addCustomTag = (tag, form, setForm, setInput) => {
+    const t = tag.trim()
+    if (!t || form.tags.includes(t)) { setInput(''); return }
+    setForm(p => ({ ...p, tags: [...p.tags, t] }))
+    setInput('')
   }
 
   function ytId(url) {
@@ -270,29 +289,11 @@ export default function Admin() {
                 <input value={tvForm.description} onChange={e => setTvForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Short description" style={inputSt} />
               </Field>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>Tags</div>
-                {Object.entries(PREDEFINED_TAGS).map(([cat, tags]) => (
-                  <div key={cat} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>{cat}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {tags.map(tag => {
-                        const on = tvForm.tags.includes(tag)
-                        return (
-                          <button key={tag} type="button" onClick={() => toggleTag(tag)} style={{
-                            padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                            border: `1px solid ${on ? GREEN : BORDER}`,
-                            background: on ? 'rgba(0,255,153,0.12)' : 'transparent',
-                            color: on ? GREEN : MUTED, fontWeight: on ? 600 : 400,
-                          }}>
-                            {tag}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <TagPicker
+                form={tvForm} setForm={setTvForm}
+                customTag={customTag} setCustomTag={setCustomTag}
+                addCustomTag={addCustomTag}
+              />
               <button type="submit" disabled={tvSaving} style={{
                 width: '100%', padding: '12px 16px', background: GREEN, color: '#000',
                 border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: 'pointer',
@@ -308,6 +309,38 @@ export default function Admin() {
                 <SectionTitle>Existing videos ({trainingVideos.length})</SectionTitle>
                 {trainingVideos.map(v => {
                   const vid = ytId(v.youtube_url)
+                  const isEditing = editingId === v.id
+
+                  if (isEditing) return (
+                    <div key={v.id} style={{ background: CARD, borderRadius: 12, marginBottom: 10, border: `1px solid ${BLUE}`, padding: 16 }}>
+                      <div style={{ fontSize: 12, color: BLUE, fontWeight: 700, marginBottom: 12 }}>✏️ Editing</div>
+                      <Field label="YouTube URL">
+                        <input value={editForm.youtube_url} onChange={e => setEditForm(p => ({ ...p, youtube_url: e.target.value }))} style={inputSt} />
+                      </Field>
+                      <Field label="Title">
+                        <input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} style={inputSt} />
+                      </Field>
+                      <Field label="Description">
+                        <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+                          rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
+                      </Field>
+                      <TagPicker
+                        form={editForm} setForm={setEditForm}
+                        customTag={editCustomTag} setCustomTag={setEditCustomTag}
+                        addCustomTag={addCustomTag}
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <button onClick={saveEditVideo} style={{ flex: 1, padding: '11px 14px', background: GREEN, color: '#000', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                          ✓ Save
+                        </button>
+                        <button onClick={() => { setEditingId(null); setEditForm(null); setEditCustomTag('') }}
+                          style={{ padding: '11px 14px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 9, color: MUTED, fontSize: 14, cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )
+
                   return (
                     <div key={v.id} style={{ background: CARD, borderRadius: 12, marginBottom: 10, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 12, padding: '12px 14px' }}>
@@ -330,6 +363,10 @@ export default function Admin() {
                           style={{ flex: 1, padding: '10px 14px', color: MUTED, fontSize: 13, textAlign: 'center', borderRight: `1px solid ${BORDER}` }}>
                           ▶ Watch
                         </a>
+                        <button onClick={() => { setEditingId(v.id); setEditForm({ youtube_url: v.youtube_url, title: v.title, description: v.description || '', tags: [...(v.tags || [])] }) }}
+                          style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: BLUE, fontSize: 13, cursor: 'pointer' }}>
+                          ✏️ Edit
+                        </button>
                         <button onClick={() => deleteTrainingVideo(v.id)}
                           style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', color: RED, fontSize: 13, cursor: 'pointer' }}>
                           Delete
@@ -448,6 +485,76 @@ function SectionTitle({ children, style }) {
   return (
     <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, ...style }}>
       {children}
+    </div>
+  )
+}
+
+function TagPicker({ form, setForm, customTag, setCustomTag, addCustomTag }) {
+  const toggleTag = (tag) => setForm(p => ({
+    ...p,
+    tags: p.tags.includes(tag) ? p.tags.filter(t => t !== tag) : [...p.tags, tag]
+  }))
+
+  const allPredefined = Object.values(PREDEFINED_TAGS).flat()
+  const customTags = (form.tags || []).filter(t => !allPredefined.includes(t))
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>Tags</div>
+      {Object.entries(PREDEFINED_TAGS).map(([cat, tags]) => (
+        <div key={cat} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>{cat}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {tags.map(tag => {
+              const on = (form.tags || []).includes(tag)
+              return (
+                <button key={tag} type="button" onClick={() => toggleTag(tag)} style={{
+                  padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+                  border: `1px solid ${on ? GREEN : BORDER}`,
+                  background: on ? 'rgba(0,255,153,0.12)' : 'transparent',
+                  color: on ? GREEN : MUTED, fontWeight: on ? 600 : 400,
+                }}>
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Custom tags already added */}
+      {customTags.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>Custom</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {customTags.map(tag => (
+              <button key={tag} type="button" onClick={() => toggleTag(tag)} style={{
+                padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+                border: `1px solid ${GREEN}`, background: 'rgba(0,255,153,0.12)',
+                color: GREEN, fontWeight: 600,
+              }}>
+                {tag} ✕
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add custom tag */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        <input
+          type="text"
+          value={customTag}
+          onChange={e => setCustomTag(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(customTag, form, setForm, setCustomTag) } }}
+          placeholder="Custom tag..."
+          style={{ ...inputSt, flex: 1, fontSize: 13, padding: '8px 12px' }}
+        />
+        <button type="button" onClick={() => addCustomTag(customTag, form, setForm, setCustomTag)}
+          style={{ padding: '8px 14px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 9, color: MUTED, fontSize: 13, cursor: 'pointer' }}>
+          + Add
+        </button>
+      </div>
     </div>
   )
 }
