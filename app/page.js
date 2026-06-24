@@ -70,7 +70,8 @@ export default function Home() {
   function ytId(url) {
     if (!url) return null
     if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
-    if (url.includes('youtu.be/')) return url.split('youtu.be/')[1]
+    if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
+    if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
     return null
   }
 
