@@ -19,7 +19,7 @@ const BRONZE = '#cd8b4e'
 
 export default function Home() {
   const [data, setData] = useState([])
-  const [dbMaps, setDbMaps] = useState([])   // { name, image_url }
+  const [dbMaps, setDbMaps] = useState([])
   const [mapFilter, setMapFilter] = useState('')
   const [bikeFilter, setBikeFilter] = useState('')
   const [riderFilter, setRiderFilter] = useState('')
@@ -27,6 +27,8 @@ export default function Home() {
   const [showAllBikes, setShowAllBikes] = useState(false)
   const [showAllMaps, setShowAllMaps] = useState(false)
   const [showAllRiders, setShowAllRiders] = useState(false)
+  const [expandedMaps, setExpandedMaps] = useState({})
+  const [expandedPodiums, setExpandedPodiums] = useState({})
 
   useEffect(() => {
     supabase
@@ -42,6 +44,14 @@ export default function Home() {
       .order('name')
       .then(({ data }) => setDbMaps(data || []))
   }, [])
+
+  // When a map filter is selected, auto-expand its section
+  useEffect(() => {
+    if (mapFilter) {
+      setExpandedMaps(prev => ({ ...prev, [mapFilter]: true }))
+      setExpandedPodiums(prev => ({ ...prev, [mapFilter]: true }))
+    }
+  }, [mapFilter])
 
   const maps = [...new Set(data.map(r => r.map_name))].filter(Boolean).sort()
   const bikes = [...new Set(data.map(r => r.bike))].filter(Boolean).sort()
@@ -65,10 +75,13 @@ export default function Home() {
     return null
   }
 
+  const toggleMap = (name) => setExpandedMaps(prev => ({ ...prev, [name]: !prev[name] }))
+  const togglePodium = (name) => setExpandedPodiums(prev => ({ ...prev, [name]: !prev[name] }))
+
   return (
     <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
         <div style={{ textAlign: 'center', padding: '20px 16px 22px' }}>
@@ -82,25 +95,17 @@ export default function Home() {
             Live competition leaderboard
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/submit" style={{
-              padding: '11px 22px', background: GREEN, color: '#000',
-              borderRadius: 10, fontWeight: 700, fontSize: 14,
-              boxShadow: '0 0 24px rgba(0,255,153,0.3)',
-            }}>
+            <Link href="/submit" style={{ padding: '11px 22px', background: GREEN, color: '#000', borderRadius: 10, fontWeight: 700, fontSize: 14, boxShadow: '0 0 24px rgba(0,255,153,0.3)' }}>
               ➕ Submit Run
             </Link>
-            <Link href="/admin" style={{
-              padding: '11px 22px', background: 'transparent', color: MUTED,
-              borderRadius: 10, fontWeight: 600, fontSize: 14,
-              border: `1px solid ${BORDER}`,
-            }}>
+            <Link href="/admin" style={{ padding: '11px 22px', background: 'transparent', color: MUTED, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
               🛠 Admin
             </Link>
           </div>
         </div>
       </div>
 
-      {/* FILTERS */}
+      {/* ── FILTERS ── */}
       <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, padding: '12px 14px 8px' }}>
         <FilterRow>
           <Chip label="All Maps" icon="🏁" active={!mapFilter} onClick={() => setMapFilter('')} />
@@ -111,7 +116,6 @@ export default function Home() {
             <Chip label={showAllMaps ? '← Less' : `+${maps.length - 3}`} onClick={() => setShowAllMaps(v => !v)} />
           )}
         </FilterRow>
-
         <FilterRow>
           <Chip label="All Bikes" icon="🏍" active={!bikeFilter} onClick={() => setBikeFilter('')} />
           {(showAllBikes ? bikes : bikes.slice(0, 2)).map(b => (
@@ -121,7 +125,6 @@ export default function Home() {
             <Chip label={showAllBikes ? '← Less' : `+${bikes.length - 2}`} onClick={() => setShowAllBikes(v => !v)} />
           )}
         </FilterRow>
-
         <FilterRow style={{ marginBottom: 0 }}>
           <Chip label="All Riders" icon="👤" active={!riderFilter} onClick={() => setRiderFilter('')} />
           {(showAllRiders ? riders : riders.slice(0, 2)).map(r => (
@@ -131,180 +134,220 @@ export default function Home() {
             <Chip label={showAllRiders ? '← Less' : `+${riders.length - 2}`} onClick={() => setShowAllRiders(v => !v)} />
           )}
         </FilterRow>
-
         {hasFilters && (
-          <button
-            onClick={() => { setMapFilter(''); setBikeFilter(''); setRiderFilter('') }}
-            style={{ marginTop: 8, background: 'none', border: 'none', color: '#ff6b6b', fontSize: 12, cursor: 'pointer', padding: '4px 0', display: 'block' }}
-          >
+          <button onClick={() => { setMapFilter(''); setBikeFilter(''); setRiderFilter('') }} style={{ marginTop: 8, background: 'none', border: 'none', color: '#ff6b6b', fontSize: 12, cursor: 'pointer', padding: '4px 0', display: 'block' }}>
             ✕ Clear filters
           </button>
         )}
       </div>
 
-      {/* PODIUM */}
-      {filteredData.length > 0 && podiumMaps.length > 0 && (
-        <div style={{ padding: '22px 16px 8px' }}>
-          {podiumMaps.map(mapName => {
-            const top3 = filteredData.filter(r => r.map_name === mapName).slice(0, 3)
-            if (top3.length === 0) return null
+      {/* ── PER-MAP SECTIONS (map image + podium, collapsible) ── */}
+      {podiumMaps.map(mapName => {
+        const top3 = filteredData.filter(r => r.map_name === mapName).slice(0, 3)
+        if (top3.length === 0) return null
+        const mapImage = dbMaps.find(m => m.name === mapName)?.image_url
+        const mapOpen = !!expandedMaps[mapName]
+        const podiumOpen = !!expandedPodiums[mapName]
 
-            // Visual order: 2nd left, 1st center elevated, 3rd right
-            const podium = [
-              top3[1] && { r: top3[1], medal: { emoji: '🥈', color: SILVER, glow: '#b8c8d430' } },
-              top3[0] && { r: top3[0], medal: { emoji: '🥇', color: GOLD, glow: '#ffc94740' }, first: true },
-              top3[2] && { r: top3[2], medal: { emoji: '🥉', color: BRONZE, glow: '#cd8b4e30' } },
-            ].filter(Boolean)
+        const medals = [
+          { color: GOLD, emoji: '🥇', glow: '#ffc94740' },
+          { color: SILVER, emoji: '🥈', glow: '#b8c8d430' },
+          { color: BRONZE, emoji: '🥉', glow: '#cd8b4e30' },
+        ]
+        // Visual order: 2nd (left), 1st (center/elevated), 3rd (right)
+        const podiumOrder = [top3[1], top3[0], top3[2]]
+          .map((r, vi) => r ? { r, medal: medals[[1, 0, 2][vi]], first: vi === 1 } : null)
+          .filter(Boolean)
 
-            const mapImage = dbMaps.find(m => m.name === mapName)?.image_url
+        return (
+          <div key={mapName} style={{ borderBottom: `1px solid ${BORDER}` }}>
 
-            return (
-              <div key={mapName} style={{ marginBottom: 28 }}>
-                {/* Map name header */}
-                {podiumMaps.length > 1 && (
-                  <div style={{ fontSize: 11, color: MUTED, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
-                    — {mapName} —
-                  </div>
-                )}
+            {/* Section header with toggle buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 14px' }}>
+              <div style={{ flex: 1, fontWeight: 700, fontSize: 15, color: TEXT }}>🏁 {mapName}</div>
+              {mapImage && (
+                <ToggleBtn active={mapOpen} onClick={() => toggleMap(mapName)}>
+                  🗺 Map
+                </ToggleBtn>
+              )}
+              <ToggleBtn active={podiumOpen} onClick={() => togglePodium(mapName)}>
+                🏆 Podium
+              </ToggleBtn>
+            </div>
 
-                {/* Full course schema image */}
-                {mapImage && (
-                  <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 14 }}>
-                    <Image
-                      src={mapImage}
-                      alt={`${mapName} course map`}
-                      width={800}
-                      height={600}
-                      style={{ width: '100%', height: 'auto', display: 'block' }}
-                      sizes="(max-width: 600px) 100vw, 500px"
-                    />
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 8 }}>
-                  {podium.map(({ r, medal, first }) => (
-                    <div key={r.id} style={{
-                      background: CARD,
-                      border: `2px solid ${medal.color}`,
-                      borderRadius: 14,
-                      padding: first ? '20px 10px 14px' : '13px 10px 14px',
-                      width: first ? 122 : 102,
-                      textAlign: 'center',
-                      boxShadow: `0 0 30px ${medal.glow}, 0 4px 20px rgba(0,0,0,0.5)`,
-                    }}>
-                      <div style={{ fontSize: first ? 34 : 26, lineHeight: 1 }}>{medal.emoji}</div>
-                      <div style={{ fontWeight: 700, fontSize: 13, marginTop: 6, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {r.riders?.name}
-                      </div>
-                      <div style={{ color: medal.color, fontSize: first ? 20 : 17, fontWeight: 800, marginTop: 3 }}>
-                        {Number(r.lap_time).toFixed(2)}s
-                      </div>
-                    </div>
-                  ))}
+            {/* Collapsible: course map image */}
+            {mapOpen && mapImage && (
+              <div style={{ padding: '0 12px 14px' }}>
+                <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+                  <Image
+                    src={mapImage}
+                    alt={`${mapName} course layout`}
+                    width={800}
+                    height={600}
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                    sizes="(max-width: 600px) 100vw, 500px"
+                    priority={!!mapFilter}
+                  />
                 </div>
               </div>
-            )
-          })}
-          <div style={{ height: 1, background: BORDER, margin: '4px 0 16px' }} />
-        </div>
-      )}
+            )}
 
-      {/* RESULTS */}
-      <div style={{ padding: '0 12px 80px', maxWidth: 500, margin: '0 auto' }}>
+            {/* Collapsible: podium */}
+            {podiumOpen && (
+              <div style={{ padding: '0 12px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 8 }}>
+                  {podiumOrder.map(({ r, medal, first }) => {
+                    const vid = ytId(r.youtube_url)
+                    return (
+                      <div key={r.id} style={{
+                        background: CARD,
+                        border: `2px solid ${medal.color}`,
+                        borderRadius: 14,
+                        padding: first ? '18px 10px 12px' : '12px 10px 12px',
+                        width: first ? 124 : 104,
+                        textAlign: 'center',
+                        boxShadow: `0 0 28px ${medal.glow}`,
+                        position: 'relative',
+                      }}>
+                        <div style={{ fontSize: first ? 32 : 24, lineHeight: 1 }}>{medal.emoji}</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginTop: 6, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.riders?.name}
+                        </div>
+                        <div style={{ color: medal.color, fontSize: first ? 19 : 16, fontWeight: 800, marginTop: 3 }}>
+                          {Number(r.lap_time).toFixed(2)}s
+                        </div>
+                        {vid && (
+                          <button
+                            onClick={() => setModalVideo(vid)}
+                            style={{
+                              marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                              width: '100%', padding: '5px 0',
+                              background: 'rgba(255,255,255,0.06)', border: `1px solid rgba(255,255,255,0.1)`,
+                              borderRadius: 6, color: MUTED, fontSize: 11, cursor: 'pointer',
+                            }}
+                          >
+                            ▶ Watch run
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* ── RESULTS FEED ── */}
+      <div style={{ padding: '16px 12px 80px', maxWidth: 500, margin: '0 auto' }}>
+
         {filteredData.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>🏁</div>
             <div style={{ fontSize: 17, marginBottom: 8, color: TEXT }}>No results yet</div>
-            <Link href="/submit" style={{ color: GREEN, fontSize: 14 }}>
-              Be the first to submit a run →
-            </Link>
+            <Link href="/submit" style={{ color: GREEN, fontSize: 14 }}>Be the first to submit a run →</Link>
           </div>
-        ) : filteredData.map((r, i) => {
-          const rankColor = i === 0 ? GOLD : i === 1 ? SILVER : i === 2 ? BRONZE : null
-          const videoId = ytId(r.youtube_url)
+        ) : (
+          <>
+            <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+              All runs · {filteredData.length} total
+            </div>
+            {filteredData.map((r, i) => {
+              const videoId = ytId(r.youtube_url)
+              const rankColor = i === 0 ? GOLD : i === 1 ? SILVER : i === 2 ? BRONZE : null
 
-          return (
-            <div key={r.id} style={{
-              background: CARD,
-              borderRadius: 12,
-              padding: '13px 14px',
-              marginBottom: 8,
-              border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`,
-              borderLeft: `3px solid ${rankColor || BORDER}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Rank badge */}
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  background: rankColor ? `${rankColor}18` : '#ffffff07',
-                  border: `1px solid ${rankColor ? rankColor + '55' : '#ffffff10'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: 14, color: rankColor || MUTED,
+              return videoId ? (
+                /* ── VIDEO CARD ── */
+                <div key={r.id} style={{
+                  background: CARD, borderRadius: 14, marginBottom: 10,
+                  overflow: 'hidden',
+                  border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`,
                 }}>
-                  {i + 1}
-                </div>
-
-                {/* Name + meta */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.riders?.name}
+                  {/* Thumbnail with overlays */}
+                  <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setModalVideo(videoId)}>
+                    <img
+                      src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                      style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
+                      alt="Run video"
+                    />
+                    {/* Dark gradient overlay */}
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.72) 100%)',
+                    }} />
+                    {/* Play button */}
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -60%)',
+                      width: 48, height: 48, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.9)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid #000', marginLeft: 4 }} />
+                    </div>
+                    {/* Bottom info overlay */}
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      padding: '10px 12px',
+                      display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <RankBadge rank={i + 1} color={rankColor} small />
+                          <span style={{ fontWeight: 700, fontSize: 15, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                            {r.riders?.name}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>
+                        {Number(r.lap_time).toFixed(2)}s
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: MUTED, marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {/* Meta row */}
+                  <div style={{ padding: '9px 12px', display: 'flex', gap: 12, fontSize: 12, color: MUTED }}>
                     <span>🏁 {r.map_name}</span>
                     {r.bike && <span>🏍 {r.bike}</span>}
                   </div>
                 </div>
-
-                {/* Time */}
-                <div style={{ color: GREEN, fontWeight: 800, fontSize: 19, flexShrink: 0 }}>
-                  {Number(r.lap_time).toFixed(2)}s
-                </div>
-              </div>
-
-              {videoId && (
-                <div
-                  onClick={() => setModalVideo(videoId)}
-                  style={{ marginTop: 10, position: 'relative', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}
-                >
-                  <img
-                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                    style={{ width: '100%', display: 'block' }}
-                    alt="Run video"
-                  />
-                  <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.35)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.92)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <div style={{ width: 0, height: 0, borderTop: '9px solid transparent', borderBottom: '9px solid transparent', borderLeft: '16px solid #000', marginLeft: 4 }} />
+              ) : (
+                /* ── INFO CARD (no video) ── */
+                <div key={r.id} style={{
+                  background: CARD, borderRadius: 12, padding: '13px 14px', marginBottom: 8,
+                  border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`,
+                  borderLeft: `3px solid ${rankColor || BORDER}`,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <RankBadge rank={i + 1} color={rankColor} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.riders?.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <span>🏁 {r.map_name}</span>
+                      {r.bike && <span>🏍 {r.bike}</span>}
                     </div>
                   </div>
+                  <div style={{ color: GREEN, fontWeight: 800, fontSize: 19, flexShrink: 0 }}>
+                    {Number(r.lap_time).toFixed(2)}s
+                  </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })}
+          </>
+        )}
       </div>
 
-      {/* VIDEO MODAL */}
+      {/* ── VIDEO MODAL ── */}
       {modalVideo && (
-        <div
-          onClick={() => setModalVideo(null)}
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.92)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: 16,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 860, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}
-          >
+        <div onClick={() => setModalVideo(null)} style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.94)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 16,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 860, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}>
             <iframe
               width="100%" height="100%"
               src={`https://www.youtube.com/embed/${modalVideo}?autoplay=1`}
@@ -319,6 +362,39 @@ export default function Home() {
   )
 }
 
+/* ── UI COMPONENTS ── */
+
+function RankBadge({ rank, color, small }) {
+  return (
+    <div style={{
+      width: small ? 26 : 34, height: small ? 26 : 34,
+      borderRadius: small ? 6 : 9, flexShrink: 0,
+      background: color ? `${color}20` : '#ffffff08',
+      border: `1px solid ${color ? color + '55' : '#ffffff10'}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontWeight: 800, fontSize: small ? 11 : 14, color: color || MUTED,
+    }}>
+      {rank}
+    </div>
+  )
+}
+
+function ToggleBtn({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '6px 12px', height: 34, borderRadius: 8,
+      border: `1px solid ${active ? GREEN : BORDER}`,
+      background: active ? 'rgba(0,255,153,0.1)' : 'transparent',
+      color: active ? GREEN : MUTED,
+      cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400,
+      whiteSpace: 'nowrap',
+    }}>
+      {children} {active ? '▲' : '▼'}
+    </button>
+  )
+}
+
 function FilterRow({ children, style }) {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, ...style }}>
@@ -329,19 +405,14 @@ function FilterRow({ children, style }) {
 
 function Chip({ label, icon, active, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '5px 12px', height: 30, borderRadius: 20,
-        border: `1px solid ${active ? GREEN : BORDER}`,
-        background: active ? 'rgba(0,255,153,0.12)' : 'transparent',
-        color: active ? GREEN : MUTED,
-        cursor: 'pointer', fontSize: 12,
-        fontWeight: active ? 600 : 400,
-        whiteSpace: 'nowrap',
-      }}
-    >
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '5px 12px', height: 30, borderRadius: 20,
+      border: `1px solid ${active ? GREEN : BORDER}`,
+      background: active ? 'rgba(0,255,153,0.12)' : 'transparent',
+      color: active ? GREEN : MUTED,
+      cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap',
+    }}>
       {icon && <span style={{ marginRight: 2 }}>{icon}</span>}
       {label}
     </button>
