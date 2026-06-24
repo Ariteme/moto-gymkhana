@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -58,7 +59,7 @@ export default function Submit() {
   const [bikeSearch, setBikeSearch] = useState('')
   const [plateDisplay, setPlateDisplay] = useState('')
 
-  const [maps, setMaps] = useState([])
+  const [maps, setMaps] = useState([])           // [{ name, image_url }]
   const [mapSearch, setMapSearch] = useState('')
   const [showMapDropdown, setShowMapDropdown] = useState(false)
 
@@ -66,10 +67,10 @@ export default function Submit() {
     async function load() {
       const [{ data: riders }, { data: mapsData }] = await Promise.all([
         supabase.from('riders').select('name'),
-        supabase.from('maps').select('name').order('name')
+        supabase.from('maps').select('name, image_url').order('name')
       ])
       if (riders) setAllRiders(riders)
-      if (mapsData) setMaps(mapsData.map(m => m.name))
+      if (mapsData) setMaps(mapsData)
     }
     load()
   }, [])
@@ -106,7 +107,9 @@ export default function Submit() {
     }
   }
 
-  const filteredMaps = maps.filter(m => m.toLowerCase().includes(mapSearch.toLowerCase()))
+  const mapNames = maps.map(m => m.name)
+  const filteredMaps = maps.filter(m => m.name.toLowerCase().includes(mapSearch.toLowerCase()))
+  const selectedMapImage = maps.find(m => m.name === form.map)?.image_url
   const filteredBikes = BIKES.filter(b => b.toLowerCase().includes(bikeSearch.toLowerCase()))
 
   const handleSubmit = async (e) => {
@@ -124,7 +127,7 @@ export default function Submit() {
         const { error } = await supabase.from('bikes').insert([{ plate: form.plate.trim(), model: form.bikeModel.trim() }])
         if (error) { alert('Failed to register bike: ' + error.message); return }
       }
-      if (!maps.includes(form.map.trim())) {
+      if (!mapNames.includes(form.map.trim())) {
         const { error } = await supabase.from('maps').insert([{ name: form.map.trim() }])
         if (error && error.code !== '23505') { alert('Failed to add map: ' + error.message); return }
       }
@@ -263,7 +266,7 @@ export default function Submit() {
         )}
 
         {/* MAP */}
-        <div style={{ marginBottom: 20, position: 'relative' }}>
+        <div style={{ marginBottom: selectedMapImage ? 12 : 20, position: 'relative' }}>
           <FieldLabel>Map / Track</FieldLabel>
           <input
             placeholder="Select or type a map name"
@@ -283,15 +286,22 @@ export default function Submit() {
           {showMapDropdown && (
             <DropList>
               {filteredMaps.map(m => (
-                <DropItem key={m} onClick={() => {
-                  setForm(prev => ({ ...prev, map: m }))
-                  setMapSearch(m)
+                <DropItem key={m.name} onClick={() => {
+                  setForm(prev => ({ ...prev, map: m.name }))
+                  setMapSearch(m.name)
                   setShowMapDropdown(false)
                 }}>
-                  {m}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {m.image_url && (
+                      <div style={{ width: 44, height: 33, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: CARD }}>
+                        <Image src={m.image_url} alt={m.name} width={88} height={66} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                    )}
+                    <span>{m.name}</span>
+                  </div>
                 </DropItem>
               ))}
-              {form.map && !maps.includes(form.map.trim()) && form.map.trim() && (
+              {form.map && !mapNames.includes(form.map.trim()) && form.map.trim() && (
                 <DropItem color={GREEN} onClick={() => setShowMapDropdown(false)}>
                   ➕ Add new: "{form.map}"
                 </DropItem>
@@ -299,6 +309,24 @@ export default function Submit() {
             </DropList>
           )}
         </div>
+
+        {/* MAP PREVIEW IMAGE */}
+        {selectedMapImage && (
+          <div style={{ marginBottom: 20, borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+            <Image
+              src={selectedMapImage}
+              alt={`${form.map} course map`}
+              width={800}
+              height={600}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+              sizes="(max-width: 600px) 100vw, 480px"
+              priority
+            />
+            <div style={{ padding: '8px 12px', fontSize: 12, color: MUTED, background: CARD, borderTop: `1px solid ${BORDER}` }}>
+              🏁 {form.map} — course layout
+            </div>
+          </div>
+        )}
 
         {/* LAP TIME */}
         <div style={{ marginBottom: 20 }}>
