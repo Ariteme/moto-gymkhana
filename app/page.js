@@ -230,7 +230,7 @@ export default function Home() {
         })}
 
         {/* ── RESULTS FEED ── */}
-        <div style={{ padding: '16px 14px 80px' }}>
+        <div style={{ padding: '16px 14px 32px' }}>
           {filteredData.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>
               <div style={{ fontSize: 52, marginBottom: 14 }}>🏁</div>
@@ -304,6 +304,21 @@ export default function Home() {
           )}
         </div>
 
+        {/* ── FOOTER ── */}
+        <footer style={{ borderTop: `1px solid ${BORDER}`, background: SURFACE, padding: '24px 16px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+            Community &amp; Location
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+            <FooterLink href="https://waze.com/ul/hsvbbd1mrv" label="📍 Hadera Rekevet" accent />
+            <FooterLink href="https://www.facebook.com/groups/1413998699183513/?ref=share&mibextid=NSMWBT" label="👥 Facebook Group" />
+            <FooterLink href="https://www.instagram.com/ariteme" label="📸 Instagram" />
+          </div>
+          <div style={{ fontSize: 12, color: '#2a3a52', letterSpacing: 1 }}>
+            🏁 Israeli Moto Gymkhana
+          </div>
+        </footer>
+
       </div>{/* end content column */}
 
       {/* ── VIDEO MODAL ── */}
@@ -357,6 +372,27 @@ function FilterRow({ children, style }) {
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, ...style }}>
       {children}
     </div>
+  )
+}
+
+function FooterLink({ href, label, accent }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '9px 16px', borderRadius: 10,
+        background: accent ? 'rgba(0,255,153,0.08)' : CARD,
+        border: `1px solid ${accent ? GREEN + '50' : BORDER}`,
+        color: accent ? GREEN : TEXT,
+        fontSize: 13, fontWeight: 500,
+        textDecoration: 'none',
+      }}
+    >
+      {label}
+    </a>
   )
 }
 
