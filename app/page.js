@@ -102,6 +102,9 @@ export default function Home() {
               <Link href="/submit" style={{ padding: '11px 22px', background: GREEN, color: '#000', borderRadius: 10, fontWeight: 700, fontSize: 14, boxShadow: '0 0 24px rgba(0,255,153,0.3)' }}>
                 ➕ Submit Run
               </Link>
+              <Link href="/training" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
+                🏋️ Training
+              </Link>
               <Link href="/news" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 📰 News
               </Link>
