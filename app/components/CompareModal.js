@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 
 const CARD   = '#101821'
 const BORDER = '#1a2840'
@@ -38,6 +38,15 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const [copied, setCopied] = useState(false)
   // false until the first seek happens; reset whenever offsets change
   const seeked = useRef(false)
+
+  const [isLandscape, setIsLandscape] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: landscape)')
+    setIsLandscape(mq.matches)
+    const handler = e => setIsLandscape(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const [run1, run2] = runs
   const vid1 = ytId(run1?.youtube_url)
@@ -176,8 +185,8 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
               </button>
             </div>
 
-            {/* Two iframes side by side with per-video offset inputs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {/* Videos: side by side in landscape, stacked full-width in portrait */}
+            <div style={{ display: 'grid', gridTemplateColumns: isLandscape ? '1fr 1fr' : '1fr', gap: isLandscape ? 6 : 12 }}>
               {[
                 { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1 },
                 { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2 },
