@@ -68,7 +68,7 @@ export default function Home() {
   useEffect(() => {
     supabase
       .from('results')
-      .select('id, map_name, lap_time, bike, youtube_url, riders(name)')
+      .select('id, map_name, lap_time, bike, youtube_url, created_at, riders(name)')
       .eq('approved', true)
       .order('lap_time', { ascending: true })
       .then(({ data }) => setData(data || []))

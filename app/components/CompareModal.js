@@ -19,6 +19,7 @@ function ytId(url) {
 }
 
 function formatDate(iso) {
+  if (!iso) return null
   return new Date(iso).toLocaleDateString('en-IL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -136,7 +137,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                 <div style={{ fontSize: 11, color: MUTED, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span>🏁 {run.map_name}</span>
                   {run.bike && <span>🏍 {run.bike}</span>}
-                  <span>📅 {formatDate(run.created_at)}</span>
+                  {formatDate(run.created_at) && <span>📅 {formatDate(run.created_at)}</span>}
                 </div>
               </div>
             )
