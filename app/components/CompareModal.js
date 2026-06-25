@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 
 const CARD   = '#101821'
 const BORDER = '#1a2840'
@@ -9,7 +9,6 @@ const BLUE   = '#1a5cff'
 const TEXT   = '#dce8f4'
 const MUTED  = '#7a90a8'
 const GOLD   = '#ffc947'
-const BG     = '#07090f'
 
 function ytId(url) {
   if (!url) return null
@@ -23,7 +22,6 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-IL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-// Send a command to a YouTube iframe via postMessage
 function ytCmd(iframeRef, func, args = []) {
   iframeRef.current?.contentWindow?.postMessage(
     JSON.stringify({ event: 'command', func, args }),
@@ -31,9 +29,12 @@ function ytCmd(iframeRef, func, args = []) {
   )
 }
 
-export default function CompareModal({ runs, onClose }) {
+export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 = 0 }) {
   const ref1 = useRef(null)
   const ref2 = useRef(null)
+  const [t1, setT1] = useState(initialT1)
+  const [t2, setT2] = useState(initialT2)
+  const [copied, setCopied] = useState(false)
 
   const [run1, run2] = runs
   const vid1 = ytId(run1?.youtube_url)
@@ -46,15 +47,52 @@ export default function CompareModal({ runs, onClose }) {
   const faster = time1 <= time2 ? run1 : run2
   const slower = time1 <= time2 ? run2 : run1
 
-  const playBoth    = useCallback(() => { ytCmd(ref1, 'playVideo');  ytCmd(ref2, 'playVideo')  }, [])
-  const pauseBoth   = useCallback(() => { ytCmd(ref1, 'pauseVideo'); ytCmd(ref2, 'pauseVideo') }, [])
-  const restartBoth = useCallback(() => {
-    ytCmd(ref1, 'seekTo', [0, true]); ytCmd(ref2, 'seekTo', [0, true])
-    // tiny delay lets seek settle before play
-    setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
+  // Resume from current playback position
+  const playBoth = useCallback(() => {
+    ytCmd(ref1, 'playVideo')
+    ytCmd(ref2, 'playVideo')
   }, [])
 
+  const pauseBoth = useCallback(() => {
+    ytCmd(ref1, 'pauseVideo')
+    ytCmd(ref2, 'pauseVideo')
+  }, [])
+
+  // Seek both to their user-set offsets then play
+  const restartBoth = useCallback(() => {
+    ytCmd(ref1, 'seekTo', [t1, true])
+    ytCmd(ref2, 'seekTo', [t2, true])
+    setTimeout(() => {
+      ytCmd(ref1, 'playVideo')
+      ytCmd(ref2, 'playVideo')
+    }, 150)
+  }, [t1, t2])
+
+  const handleShare = useCallback(async () => {
+    const url = `https://moto-gymkhana.vercel.app/compare?r1=${run1.id}&r2=${run2.id}&t1=${t1}&t2=${t2}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${run1.riders?.name} vs ${run2.riders?.name}`, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    } catch { /* cancelled */ }
+  }, [run1, run2, t1, t2])
+
   if (!run1 || !run2) return null
+
+  const inputStyle = {
+    width: 56,
+    background: '#07090f',
+    border: `1px solid ${BORDER}`,
+    borderRadius: 6,
+    padding: '4px 8px',
+    color: TEXT,
+    fontSize: 13,
+    textAlign: 'center',
+  }
 
   return (
     <div
@@ -74,7 +112,7 @@ export default function CompareModal({ runs, onClose }) {
 
         {/* Stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-          {[run1, run2].map((run, i) => {
+          {[run1, run2].map((run) => {
             const isFaster = run === faster
             return (
               <div key={run.id} style={{ background: CARD, borderRadius: 12, padding: '12px 14px', border: `1px solid ${isFaster ? GREEN + '55' : BORDER}`, borderTop: `3px solid ${isFaster ? GREEN : BORDER}` }}>
@@ -104,11 +142,11 @@ export default function CompareModal({ runs, onClose }) {
           <span style={{ color: TEXT, fontWeight: 600 }}>{slower.riders?.name}</span>
         </div>
 
-        {/* Videos */}
+        {/* Videos + offset controls */}
         {bothHaveVideo && (
           <>
-            {/* Sync controls */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+            {/* Sync controls + share button */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
               {[
                 { label: '⏮ Restart', fn: restartBoth },
                 { label: '▶ Play',    fn: playBoth    },
@@ -118,11 +156,21 @@ export default function CompareModal({ runs, onClose }) {
                   {label}
                 </button>
               ))}
+              <div style={{ width: 1, height: 28, background: BORDER }} />
+              <button
+                onClick={handleShare}
+                style={{ background: CARD, border: `1px solid ${copied ? GREEN + '66' : BORDER}`, borderRadius: 8, padding: '8px 14px', color: copied ? GREEN : MUTED, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'color 0.2s, border-color 0.2s' }}
+              >
+                {copied ? '✓ Copied!' : '🔗 Share'}
+              </button>
             </div>
 
-            {/* Two iframes side by side */}
+            {/* Two iframes side by side with per-video offset inputs */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {[{ ref: ref1, vid: vid1, run: run1 }, { ref: ref2, vid: vid2, run: run2 }].map(({ ref, vid, run }) => (
+              {[
+                { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1 },
+                { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2 },
+              ].map(({ ref, vid, run, t, setT }) => (
                 <div key={run.id}>
                   <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
@@ -134,31 +182,65 @@ export default function CompareModal({ runs, onClose }) {
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                   />
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: MUTED }}>Start at</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={t}
+                      onChange={e => setT(Math.max(0, Number(e.target.value)))}
+                      style={inputStyle}
+                    />
+                    <span style={{ fontSize: 11, color: MUTED }}>s</span>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div style={{ marginTop: 10, textAlign: 'center', fontSize: 11, color: MUTED }}>
-              Tap ▶ Play to start both videos simultaneously
+              Set start times → tap ⏮ Restart to sync · 🔗 Share locks in your timecodes
             </div>
           </>
         )}
 
         {/* One has video, one doesn't */}
         {(vid1 || vid2) && !bothHaveVideo && (
-          <div style={{ background: CARD, borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-            <div style={{ fontSize: 12, color: MUTED, padding: '8px 12px' }}>
-              {vid1 ? `▶ ${run1.riders?.name}'s video` : `▶ ${run2.riders?.name}'s video`}
+          <>
+            <div style={{ background: CARD, borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+              <div style={{ fontSize: 12, color: MUTED, padding: '8px 12px' }}>
+                {vid1 ? `▶ ${run1.riders?.name}'s video` : `▶ ${run2.riders?.name}'s video`}
+              </div>
+              <iframe
+                src={`https://www.youtube.com/embed/${vid1 || vid2}?rel=0&modestbranding=1`}
+                style={{ width: '100%', aspectRatio: '9/16', border: 'none', display: 'block' }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+              />
+              <div style={{ padding: '10px 12px', fontSize: 12, color: MUTED }}>
+                No video for {!vid1 ? run1.riders?.name : run2.riders?.name}
+              </div>
             </div>
-            <iframe
-              src={`https://www.youtube.com/embed/${vid1 || vid2}?rel=0&modestbranding=1`}
-              style={{ width: '100%', aspectRatio: '9/16', border: 'none', display: 'block' }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
-            <div style={{ padding: '10px 12px', fontSize: 12, color: MUTED }}>
-              No video for {!vid1 ? run1.riders?.name : run2.riders?.name}
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <button
+                onClick={handleShare}
+                style={{ background: CARD, border: `1px solid ${copied ? GREEN + '66' : BORDER}`, borderRadius: 10, padding: '10px 20px', color: copied ? GREEN : MUTED, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+              >
+                {copied ? '✓ Link copied!' : '🔗 Share comparison'}
+              </button>
             </div>
+          </>
+        )}
+
+        {/* No videos — share stats only */}
+        {!vid1 && !vid2 && (
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={handleShare}
+              style={{ background: CARD, border: `1px solid ${copied ? GREEN + '66' : BORDER}`, borderRadius: 10, padding: '10px 20px', color: copied ? GREEN : TEXT, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+            >
+              {copied ? '✓ Link copied!' : '🔗 Share this comparison'}
+            </button>
           </div>
         )}
 
