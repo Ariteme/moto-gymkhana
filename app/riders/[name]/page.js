@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { use } from 'react'
@@ -25,6 +25,8 @@ export default function RiderProfile({ params }) {
 
   const [runs, setRuns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [mapFilter, setMapFilter] = useState(null)
+  const [copiedId, setCopiedId] = useState(null)
 
   useEffect(() => {
     supabase
@@ -32,7 +34,7 @@ export default function RiderProfile({ params }) {
       .select('id, map_name, lap_time, bike, youtube_url, created_at, riders!inner(name)')
       .eq('approved', true)
       .eq('riders.name', riderName)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .then(({ data }) => { setRuns(data || []); setLoading(false) })
   }, [riderName])
 
@@ -45,6 +47,9 @@ export default function RiderProfile({ params }) {
   const bikes = [...new Set(runs.map(r => r.bike).filter(Boolean))]
   const initials = riderName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
+  const filteredRuns = mapFilter ? runs.filter(r => r.map_name === mapFilter) : runs
+  const allMapNames = [...new Set(runs.map(r => r.map_name))].sort()
+
   function ytId(url) {
     if (!url) return null
     if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
@@ -56,6 +61,29 @@ export default function RiderProfile({ params }) {
   function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-IL', { day: 'numeric', month: 'short', year: 'numeric' })
   }
+
+  const handleShare = useCallback(async (run) => {
+    const time = Number(run.lap_time).toFixed(2)
+    const profileUrl = `https://moto-gymkhana.vercel.app/riders/${encodeURIComponent(riderName)}`
+    const lines = [
+      `🏁 ${riderName} — ${time}s on ${run.map_name}`,
+      run.bike ? `🏍 ${run.bike}` : null,
+      run.youtube_url ? `📹 ${run.youtube_url}` : null,
+      profileUrl,
+    ].filter(Boolean).join('\n')
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: lines })
+      } else {
+        await navigator.clipboard.writeText(lines)
+        setCopiedId(run.id)
+        setTimeout(() => setCopiedId(null), 2000)
+      }
+    } catch {
+      // user cancelled share — do nothing
+    }
+  }, [riderName])
 
   return (
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
@@ -100,6 +128,8 @@ export default function RiderProfile({ params }) {
 
       {!loading && runs.length > 0 && (
         <div style={{ padding: '20px 14px 60px' }}>
+
+          {/* Best per map */}
           <SectionTitle>{T.best_per_map}</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
             {sortedMaps.map(([mapName, run], i) => (
@@ -118,10 +148,30 @@ export default function RiderProfile({ params }) {
             ))}
           </div>
 
+          {/* Map filter chips */}
           <SectionTitle>{T.all_runs_section} ({runs.length})</SectionTitle>
+          {allMapNames.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+              <FilterChip active={!mapFilter} onClick={() => setMapFilter(null)}>{T.all_maps_filter}</FilterChip>
+              {allMapNames.map(m => (
+                <FilterChip key={m} active={mapFilter === m} onClick={() => setMapFilter(mapFilter === m ? null : m)}>{m}</FilterChip>
+              ))}
+            </div>
+          )}
+
+          {/* Progression chart — only when a map is selected and has ≥2 runs */}
+          {mapFilter && filteredRuns.length >= 2 && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>{T.progression} · {mapFilter}</div>
+              <ProgressionChart runs={filteredRuns} />
+            </div>
+          )}
+
+          {/* Run cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {runs.map(r => {
+            {[...filteredRuns].reverse().map(r => {
               const videoId = ytId(r.youtube_url)
+              const isCopied = copiedId === r.id
               return (
                 <div key={r.id} style={{ background: CARD, borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
                   {videoId && (
@@ -134,12 +184,20 @@ export default function RiderProfile({ params }) {
                       </div>
                     </a>
                   )}
-                  <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
+                  <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: TEXT }}>🏁 {r.map_name}</div>
                       <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{formatDate(r.created_at)}</div>
                     </div>
-                    <div style={{ color: GREEN, fontWeight: 800, fontSize: 18 }}>{Number(r.lap_time).toFixed(2)}s</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ color: GREEN, fontWeight: 800, fontSize: 18 }}>{Number(r.lap_time).toFixed(2)}s</div>
+                      <button
+                        onClick={() => handleShare(r)}
+                        style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', color: isCopied ? GREEN : MUTED, fontSize: 13, transition: 'color 0.2s' }}
+                      >
+                        {isCopied ? T.copied : '↗'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -149,6 +207,90 @@ export default function RiderProfile({ params }) {
       )}
     </div>
     </div>
+  )
+}
+
+function ProgressionChart({ runs }) {
+  const W = 580, H = 160
+  const PAD = { top: 16, right: 16, bottom: 32, left: 52 }
+  const innerW = W - PAD.left - PAD.right
+  const innerH = H - PAD.top - PAD.bottom
+
+  const times = runs.map(r => Number(r.lap_time))
+  const dates = runs.map(r => new Date(r.created_at).getTime())
+  const minT = Math.min(...times), maxT = Math.max(...times)
+  const minD = Math.min(...dates), maxD = Math.max(...dates)
+  const spread = maxT - minT || 1
+  const dateSpread = maxD - minD || 1
+
+  const sx = d => PAD.left + ((d - minD) / dateSpread) * innerW
+  const sy = t => PAD.top + ((t - minT) / spread) * innerH  // higher time = lower on chart
+
+  const pts = runs.map((r, i) => ({ x: sx(dates[i]), y: sy(times[i]), t: times[i], date: r.created_at }))
+  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+
+  // Y-axis labels: show min and max
+  const yLabels = [
+    { y: PAD.top, val: minT.toFixed(2) + 's' },
+    { y: PAD.top + innerH, val: maxT.toFixed(2) + 's' },
+  ]
+
+  return (
+    <div style={{ background: CARD, borderRadius: 12, border: `1px solid ${BORDER}`, padding: '12px 8px 8px', overflowX: 'auto' }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', minWidth: 260 }}>
+        {/* Horizontal grid lines */}
+        {[0, 0.5, 1].map(f => (
+          <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + f * innerH} y2={PAD.top + f * innerH}
+            stroke={BORDER} strokeWidth="1" />
+        ))}
+
+        {/* Y-axis labels */}
+        {yLabels.map(({ y, val }) => (
+          <text key={val} x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize="11" fill={MUTED}>{val}</text>
+        ))}
+
+        {/* Line */}
+        <path d={pathD} fill="none" stroke={BLUE} strokeWidth="2" strokeLinejoin="round" />
+
+        {/* Points */}
+        {pts.map((p, i) => {
+          const isBest = p.t === minT
+          return (
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r={isBest ? 6 : 4}
+                fill={isBest ? GREEN : CARD} stroke={isBest ? GREEN : BLUE} strokeWidth="2" />
+              {isBest && (
+                <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="11" fill={GREEN} fontWeight="bold">
+                  {p.t.toFixed(2)}s
+                </text>
+              )}
+            </g>
+          )
+        })}
+
+        {/* X-axis date labels (first and last) */}
+        {[pts[0], pts[pts.length - 1]].map((p, i) => (
+          <text key={i} x={p.x} y={H - 4} textAnchor={i === 0 ? 'start' : 'end'} fontSize="10" fill={MUTED}>
+            {new Date(p.date).toLocaleDateString('en-IL', { day: 'numeric', month: 'short' })}
+          </text>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      background: active ? BLUE : 'transparent',
+      border: `1px solid ${active ? BLUE : BORDER}`,
+      borderRadius: 20, padding: '5px 12px',
+      color: active ? '#fff' : MUTED,
+      fontSize: 12, cursor: 'pointer', fontWeight: active ? 600 : 400,
+      transition: 'all 0.15s',
+    }}>
+      {children}
+    </button>
   )
 }
 
