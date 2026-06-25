@@ -45,5 +45,5 @@ node_modules
 
 # local MCP config (contains secrets)
 .mcp.json
-gymkhana-logo.png
+/gymkhana-logo.png
 logo_nobg_preview.png
