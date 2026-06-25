@@ -34,6 +34,26 @@ export default function Home() {
   const [showAllRiders, setShowAllRiders] = useState(false)
   const [expandedMaps, setExpandedMaps] = useState({})
   const [expandedPodiums, setExpandedPodiums] = useState({})
+  const [copiedId, setCopiedId] = useState(null)
+
+  async function handleShare(r) {
+    const riderName = r.riders?.name
+    const time = Number(r.lap_time).toFixed(2)
+    const lines = [
+      `🏁 ${riderName} — ${time}s on ${r.map_name}`,
+      r.bike ? `🏍 ${r.bike}` : null,
+      r.youtube_url ? `📹 ${r.youtube_url}` : null,
+      `https://moto-gymkhana.vercel.app/riders/${encodeURIComponent(riderName)}`,
+    ].filter(Boolean).join('\n')
+    try {
+      if (navigator.share) { await navigator.share({ text: lines }) }
+      else {
+        await navigator.clipboard.writeText(lines)
+        setCopiedId(r.id)
+        setTimeout(() => setCopiedId(null), 2000)
+      }
+    } catch { /* cancelled */ }
+  }
 
   useEffect(() => {
     supabase
@@ -263,9 +283,11 @@ export default function Home() {
                         <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
                       </div>
                     </div>
-                    <div style={{ padding: '9px 12px', display: 'flex', gap: 12, fontSize: 12, color: MUTED }}>
-                      <span>🏁 {r.map_name}</span>
-                      {r.bike && <span>🏍 {r.bike}</span>}
+                    <div style={{ padding: '9px 12px', display: 'flex', gap: 12, fontSize: 12, color: MUTED, alignItems: 'center' }}>
+                      <span style={{ flex: 1 }}>🏁 {r.map_name}{r.bike ? ` · 🏍 ${r.bike}` : ''}</span>
+                      <button onClick={() => handleShare(r)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '3px 9px', cursor: 'pointer', color: copiedId === r.id ? GREEN : MUTED, fontSize: 12 }}>
+                        {copiedId === r.id ? T.copied : '↗'}
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -278,7 +300,12 @@ export default function Home() {
                         {r.bike && <span>🏍 {r.bike}</span>}
                       </div>
                     </div>
-                    <div style={{ color: GREEN, fontWeight: 800, fontSize: 19, flexShrink: 0 }}>{Number(r.lap_time).toFixed(2)}s</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ color: GREEN, fontWeight: 800, fontSize: 19 }}>{Number(r.lap_time).toFixed(2)}s</div>
+                      <button onClick={() => handleShare(r)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer', color: copiedId === r.id ? GREEN : MUTED, fontSize: 12 }}>
+                        {copiedId === r.id ? T.copied : '↗'}
+                      </button>
+                    </div>
                   </div>
                 )
               })}
