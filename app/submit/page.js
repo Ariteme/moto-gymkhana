@@ -91,7 +91,7 @@ export default function Submit() {
 
   const handleNameChange = (e) => {
     const value = e.target.value
-    if (!/^[A-Za-z0-9\s]*$/.test(value)) { alert('Please use English characters only.'); return }
+    if (!/^[A-Za-z0-9\s]*$/.test(value)) { alert(T.english_only); return }
     setForm(prev => ({ ...prev, name: value }))
     if (!value) { setRiderSuggestions([]); setFuzzySuggestions([]); return }
     const v = value.toLowerCase().trim()
@@ -319,7 +319,7 @@ export default function Submit() {
             onBlur={() => setTimeout(() => setShowMapDropdown(false), 200)}
             onChange={(e) => {
               const v = e.target.value
-              if (!/^[A-Za-z0-9\s]*$/.test(v)) { alert('Please use English characters only.'); return }
+              if (!/^[A-Za-z0-9\s]*$/.test(v)) { alert(T.english_only); return }
               setForm(prev => ({ ...prev, map: v }))
               setMapSearch(v)
               setShowMapDropdown(true)

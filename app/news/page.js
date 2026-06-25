@@ -42,7 +42,6 @@ export default function News() {
 
   useEffect(() => {
     if (posts.length === 0) { setDisplayPosts([]); return }
-    if (lang === 'en') { setDisplayPosts(posts); return }
 
     const textsToTranslate = posts.map(p => p.text || '')
     setTranslating(true)
@@ -50,7 +49,7 @@ export default function News() {
     fetch('/api/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: textsToTranslate, targetLang: 'ru' }),
+      body: JSON.stringify({ texts: textsToTranslate, targetLang: lang }),
     })
       .then(r => r.json())
       .then(({ translations }) => {

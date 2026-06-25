@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
-import { i18n } from '@/lib/i18n'
+import { i18n, translateTag } from '@/lib/i18n'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -69,7 +69,7 @@ export default function Training() {
           <div style={{ padding: '0 12px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <Chip label={T.all} active={!activeTag} onClick={() => setActiveTag('')} />
             {allTags.map(tag => (
-              <Chip key={tag} label={tag} active={activeTag === tag} onClick={() => setActiveTag(tag === activeTag ? '' : tag)} />
+              <Chip key={tag} label={translateTag(tag, lang)} active={activeTag === tag} onClick={() => setActiveTag(tag === activeTag ? '' : tag)} />
             ))}
           </div>
         )}
@@ -111,7 +111,7 @@ export default function Training() {
                         border: `1px solid ${activeTag === tag ? GREEN : GREEN + '30'}`,
                         color: GREEN, fontWeight: activeTag === tag ? 700 : 400,
                       }}>
-                        {tag}
+                        {translateTag(tag, lang)}
                       </button>
                     ))}
                   </div>

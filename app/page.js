@@ -304,7 +304,7 @@ export default function Home() {
             <FooterLink href="https://waze.com/ul/hsvbbd1mrv" label="📍 Hadera Rekevet" accent />
             <FooterLink href="https://www.facebook.com/groups/1413998699183513/?ref=share&mibextid=NSMWBT" label="👥 Facebook Group" />
             <FooterLink href="https://www.instagram.com/ariteme" label="📸 Instagram" />
-            <FooterLink href="https://wa.me/972547263700?text=Hi%2C+I%27d+like+to+join+the+Moto+Gymkhana+WhatsApp+group" label="💬 Join WhatsApp" />
+            <FooterLink href="https://wa.me/972547263700?text=Hi%2C+I%27d+like+to+join+the+Moto+Gymkhana+WhatsApp+group" label={T.join_whatsapp} />
           </div>
           <div style={{ fontSize: 12, color: '#2a3a52', letterSpacing: 1 }}>🏁 Israeli Moto Gymkhana</div>
         </footer>

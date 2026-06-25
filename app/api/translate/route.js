@@ -48,6 +48,7 @@ export async function POST(request) {
   for (let i = 0; i < texts.length; i++) {
     if (!texts[i]) { results[i] = texts[i]; continue }
     if (targetLang === 'ru' && isCyrillic(texts[i])) { results[i] = texts[i]; continue }
+    if (targetLang === 'en' && !isCyrillic(texts[i])) { results[i] = texts[i]; continue }
   }
 
   // Batch cache lookup
