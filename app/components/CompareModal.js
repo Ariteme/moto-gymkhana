@@ -39,13 +39,20 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   // false until the first seek happens; reset whenever offsets change
   const seeked = useRef(false)
 
-  const [isLandscape, setIsLandscape] = useState(false)
+  const [isLandscape, setIsLandscape] = useState(true)
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
     setIsLandscape(mq.matches)
     const handler = e => setIsLandscape(e.matches)
     mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+
+    // Try to lock to landscape for comparison — not supported on iOS
+    screen.orientation?.lock?.('landscape').catch(() => {})
+
+    return () => {
+      mq.removeEventListener('change', handler)
+      screen.orientation?.unlock?.()
+    }
   }, [])
 
   const [run1, run2] = runs
@@ -185,8 +192,15 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
               </button>
             </div>
 
-            {/* Videos: side by side in landscape, stacked full-width in portrait */}
-            <div style={{ display: 'grid', gridTemplateColumns: isLandscape ? '1fr 1fr' : '1fr', gap: isLandscape ? 6 : 12 }}>
+            {/* Portrait hint — shown when orientation lock isn't supported (e.g. iOS) */}
+            {!isLandscape && (
+              <div style={{ textAlign: 'center', padding: '7px 12px', background: GOLD + '18', border: `1px solid ${GOLD}33`, borderRadius: 8, marginBottom: 10, fontSize: 12, color: GOLD }}>
+                🔄 Rotate your phone for a better view
+              </div>
+            )}
+
+            {/* Always side-by-side so both videos are visible simultaneously */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {[
                 { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1 },
                 { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2 },
