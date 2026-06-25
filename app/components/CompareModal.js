@@ -35,6 +35,8 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const [t1, setT1] = useState(initialT1)
   const [t2, setT2] = useState(initialT2)
   const [copied, setCopied] = useState(false)
+  // false until the first seek happens; reset whenever offsets change
+  const seeked = useRef(false)
 
   const [run1, run2] = runs
   const vid1 = ytId(run1?.youtube_url)
@@ -47,19 +49,27 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const faster = time1 <= time2 ? run1 : run2
   const slower = time1 <= time2 ? run2 : run1
 
-  // Resume from current playback position
+  // First play seeks to offsets; subsequent plays (after pause) resume from current position
   const playBoth = useCallback(() => {
-    ytCmd(ref1, 'playVideo')
-    ytCmd(ref2, 'playVideo')
-  }, [])
+    if (!seeked.current) {
+      ytCmd(ref1, 'seekTo', [t1, true])
+      ytCmd(ref2, 'seekTo', [t2, true])
+      seeked.current = true
+      setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
+    } else {
+      ytCmd(ref1, 'playVideo')
+      ytCmd(ref2, 'playVideo')
+    }
+  }, [t1, t2])
 
   const pauseBoth = useCallback(() => {
     ytCmd(ref1, 'pauseVideo')
     ytCmd(ref2, 'pauseVideo')
   }, [])
 
-  // Seek both to their user-set offsets then play
+  // Always seek back to offsets and replay
   const restartBoth = useCallback(() => {
+    seeked.current = true
     ytCmd(ref1, 'seekTo', [t1, true])
     ytCmd(ref2, 'seekTo', [t2, true])
     setTimeout(() => {
@@ -189,7 +199,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                       min={0}
                       step={1}
                       value={t}
-                      onChange={e => setT(Math.max(0, Number(e.target.value)))}
+                      onChange={e => { seeked.current = false; setT(Math.max(0, Number(e.target.value))) }}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: 11, color: MUTED }}>s</span>
