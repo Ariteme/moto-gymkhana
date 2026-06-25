@@ -302,7 +302,7 @@ export default function Home() {
           <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{T.community}</div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
             <FooterLink href="https://waze.com/ul/hsvbbd1mrv" label="📍 Hadera Rekevet" accent />
-            <FooterLink href="https://www.facebook.com/groups/1413998699183513/?ref=share&mibextid=NSMWBT" label="👥 Facebook Group" />
+            <FooterLink href="https://www.facebook.com/groups/1413998699183513/?ref=share&mibextid=NSMWBT" label={T.facebook_group} />
             <FooterLink href="https://www.instagram.com/ariteme" label="📸 Instagram" />
             <FooterLink href="https://wa.me/972547263700?text=Hi%2C+I%27d+like+to+join+the+Moto+Gymkhana+WhatsApp+group" label={T.join_whatsapp} />
           </div>
