@@ -176,9 +176,9 @@ export default function Home() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 14px' }}>
                 <div style={{ flex: 1, fontWeight: 700, fontSize: 15, color: TEXT }}>🏁 {mapName}</div>
                 {mapImage && (
-                  <ToggleBtn active={mapOpen} onClick={() => toggleMap(mapName)}>🗺 Map</ToggleBtn>
+                  <ToggleBtn active={mapOpen} onClick={() => toggleMap(mapName)}>{T.map_btn}</ToggleBtn>
                 )}
-                <ToggleBtn active={podiumOpen} onClick={() => togglePodium(mapName)}>🏆 Podium</ToggleBtn>
+                <ToggleBtn active={podiumOpen} onClick={() => togglePodium(mapName)}>{T.podium_btn}</ToggleBtn>
               </div>
 
               {mapOpen && mapImage && (
