@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { i18n } from '@/lib/i18n'
+import CompareModal from '@/app/components/CompareModal'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -35,6 +36,15 @@ export default function Home() {
   const [expandedMaps, setExpandedMaps] = useState({})
   const [expandedPodiums, setExpandedPodiums] = useState({})
   const [copiedId, setCopiedId] = useState(null)
+  const [compareRuns, setCompareRuns] = useState([])
+
+  function toggleCompare(run) {
+    setCompareRuns(prev => {
+      if (prev.find(r => r.id === run.id)) return prev.filter(r => r.id !== run.id)
+      if (prev.length >= 2) return [prev[1], run]
+      return [...prev, run]
+    })
+  }
 
   async function handleShare(r) {
     const riderName = r.riders?.name
@@ -283,10 +293,13 @@ export default function Home() {
                         <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
                       </div>
                     </div>
-                    <div style={{ padding: '9px 12px', display: 'flex', gap: 12, fontSize: 12, color: MUTED, alignItems: 'center' }}>
+                    <div style={{ padding: '9px 12px', display: 'flex', gap: 8, fontSize: 12, color: MUTED, alignItems: 'center' }}>
                       <span style={{ flex: 1 }}>🏁 {r.map_name}{r.bike ? ` · 🏍 ${r.bike}` : ''}</span>
                       <button onClick={() => handleShare(r)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '3px 9px', cursor: 'pointer', color: copiedId === r.id ? GREEN : MUTED, fontSize: 12 }}>
                         {copiedId === r.id ? T.copied : '↗'}
+                      </button>
+                      <button onClick={() => toggleCompare(r)} style={{ background: compareRuns.find(c => c.id === r.id) ? BLUE : 'none', border: `1px solid ${compareRuns.find(c => c.id === r.id) ? BLUE : BORDER}`, borderRadius: 8, padding: '3px 9px', cursor: 'pointer', color: compareRuns.find(c => c.id === r.id) ? '#fff' : MUTED, fontSize: 12 }}>
+                        ⚖
                       </button>
                     </div>
                   </div>
@@ -304,6 +317,9 @@ export default function Home() {
                       <div style={{ color: GREEN, fontWeight: 800, fontSize: 19 }}>{Number(r.lap_time).toFixed(2)}s</div>
                       <button onClick={() => handleShare(r)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer', color: copiedId === r.id ? GREEN : MUTED, fontSize: 12 }}>
                         {copiedId === r.id ? T.copied : '↗'}
+                      </button>
+                      <button onClick={() => toggleCompare(r)} style={{ background: compareRuns.find(c => c.id === r.id) ? BLUE : 'none', border: `1px solid ${compareRuns.find(c => c.id === r.id) ? BLUE : BORDER}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer', color: compareRuns.find(c => c.id === r.id) ? '#fff' : MUTED, fontSize: 12 }}>
+                        ⚖
                       </button>
                     </div>
                   </div>
@@ -336,6 +352,19 @@ export default function Home() {
           <div style={{ fontSize: 12, color: '#2a3a52', letterSpacing: 1 }}>🏁 Israeli Moto Gymkhana</div>
         </footer>
       </div>
+
+      {/* COMPARE — floating hint when 1 run selected */}
+      {compareRuns.length === 1 && (
+        <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: BLUE, color: '#fff', borderRadius: 24, padding: '10px 20px', fontSize: 13, fontWeight: 600, zIndex: 500, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+          ⚖ Select a 2nd run to compare
+          <button onClick={() => setCompareRuns([])} style={{ marginLeft: 12, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, opacity: 0.7 }}>✕</button>
+        </div>
+      )}
+
+      {/* COMPARE MODAL */}
+      {compareRuns.length === 2 && (
+        <CompareModal runs={compareRuns} onClose={() => setCompareRuns([])} />
+      )}
 
       {/* VIDEO MODAL */}
       {modalVideo && (
