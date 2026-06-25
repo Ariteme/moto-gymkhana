@@ -286,8 +286,8 @@ export default function Admin() {
                   placeholder="e.g. Gymkhana Basic Patterns" style={inputSt} required />
               </Field>
               <Field label="Description (optional)">
-                <input value={tvForm.description} onChange={e => setTvForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Short description" style={inputSt} />
+                <textarea value={tvForm.description} onChange={e => setTvForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Short description" rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
               </Field>
               <Field label="Title (Russian)">
                 <input value={tvForm.title_ru} onChange={e => setTvForm(p => ({ ...p, title_ru: e.target.value }))}
