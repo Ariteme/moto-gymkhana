@@ -281,7 +281,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: isWide ? 'none' : 700, margin: '0 auto', padding: isWide ? '12px 24px 16px' : '16px 12px 40px', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}
+        style={{ maxWidth: isWide && cinemaMode ? 'none' : 700, margin: '0 auto', padding: '16px 12px 40px', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}
       >
 
         {/* Header */}
@@ -366,7 +366,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
             <div style={{ display: 'flex', justifyContent: 'center', gap: isWide ? 16 : 6 }}>
               {videoEntries.map(({ ref, vid, run, rawT, setRawT, live }) => (
                 <div key={run.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isWide ? 300 : '100%' }}>
+                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
                   </div>
                   <iframe
@@ -374,9 +374,9 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                     src={`https://www.youtube.com/embed/${vid}?enablejsapi=1&rel=0&modestbranding=1`}
                     style={{
                       aspectRatio: '9/16', border: 'none', borderRadius: 8, display: 'block', background: '#000',
-                      transition: 'height 0.35s ease',
-                      ...(isWide
-                        ? { height: cinemaMode ? 'calc(100vh - 120px)' : 'calc(100vh - 340px)', width: 'auto' }
+                      transition: 'height 0.35s ease, width 0.35s ease',
+                      ...(isWide && cinemaMode
+                        ? { height: 'calc(100vh - 120px)', width: 'auto' }
                         : { width: '100%' }),
                     }}
                     allow="autoplay; encrypted-media"
