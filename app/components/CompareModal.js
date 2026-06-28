@@ -49,6 +49,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
   const [isLandscape, setIsLandscape] = useState(true)
   const [isWide, setIsWide] = useState(false)
+  const [cinemaMode, setCinemaMode] = useState(false)
 
   const [run1, run2] = runs
   const vid1 = ytId(run1?.youtube_url)
@@ -123,6 +124,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const slower = time1 <= time2 ? run2 : run1
 
   const playBoth = useCallback(() => {
+    setCinemaMode(true)
     if (!seeked.current) {
       ytCmd(ref1, 'seekTo', [t1, true])
       ytCmd(ref2, 'seekTo', [t2, true])
@@ -135,11 +137,13 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   }, [t1, t2])
 
   const pauseBoth = useCallback(() => {
+    setCinemaMode(false)
     ytCmd(ref1, 'pauseVideo')
     ytCmd(ref2, 'pauseVideo')
   }, [])
 
   const restartBoth = useCallback(() => {
+    setCinemaMode(true)
     seeked.current = true
     ytCmd(ref1, 'seekTo', [t1, true])
     ytCmd(ref2, 'seekTo', [t2, true])
@@ -193,36 +197,37 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
           <button onClick={onClose} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 12px', color: MUTED, cursor: 'pointer', fontSize: 14 }}>✕ Close</button>
         </div>
 
-        {/* Stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-          {[run1, run2].map((run) => {
-            const isFaster = run === faster
-            return (
-              <div key={run.id} style={{ background: CARD, borderRadius: 12, padding: '12px 14px', border: `1px solid ${isFaster ? GREEN + '55' : BORDER}`, borderTop: `3px solid ${isFaster ? GREEN : BORDER}` }}>
-                <div style={{ color: isFaster ? GREEN : TEXT, fontWeight: 900, fontSize: 24, marginBottom: 4 }}>
-                  {Number(run.lap_time).toFixed(2)}s
-                  {isFaster && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 6, background: GREEN + '22', color: GREEN, borderRadius: 4, padding: '2px 6px' }}>FASTER</span>}
+        {/* Stat cards + delta — collapse when playing to free up space for videos */}
+        <div style={{ maxHeight: cinemaMode ? 0 : '400px', overflow: 'hidden', transition: 'max-height 0.35s ease' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            {[run1, run2].map((run) => {
+              const isFaster = run === faster
+              return (
+                <div key={run.id} style={{ background: CARD, borderRadius: 12, padding: '12px 14px', border: `1px solid ${isFaster ? GREEN + '55' : BORDER}`, borderTop: `3px solid ${isFaster ? GREEN : BORDER}` }}>
+                  <div style={{ color: isFaster ? GREEN : TEXT, fontWeight: 900, fontSize: 24, marginBottom: 4 }}>
+                    {Number(run.lap_time).toFixed(2)}s
+                    {isFaster && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 6, background: GREEN + '22', color: GREEN, borderRadius: 4, padding: '2px 6px' }}>FASTER</span>}
+                  </div>
+                  <div style={{ color: TEXT, fontWeight: 700, fontSize: 14, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {run.riders?.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: MUTED, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span>🏁 {run.map_name}</span>
+                    {run.bike && <span>🏍 {run.bike}</span>}
+                    {formatDate(run.created_at) && <span>📅 {formatDate(run.created_at)}</span>}
+                  </div>
                 </div>
-                <div style={{ color: TEXT, fontWeight: 700, fontSize: 14, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {run.riders?.name}
-                </div>
-                <div style={{ fontSize: 11, color: MUTED, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span>🏁 {run.map_name}</span>
-                  {run.bike && <span>🏍 {run.bike}</span>}
-                  {formatDate(run.created_at) && <span>📅 {formatDate(run.created_at)}</span>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
 
-        {/* Delta banner */}
-        <div style={{ background: GOLD + '18', border: `1px solid ${GOLD}33`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', marginBottom: 20 }}>
-          <span style={{ color: GOLD, fontWeight: 700 }}>{faster.riders?.name}</span>
-          <span style={{ color: MUTED }}> is </span>
-          <span style={{ color: GOLD, fontWeight: 900 }}>{delta}s</span>
-          <span style={{ color: MUTED }}> faster than </span>
-          <span style={{ color: TEXT, fontWeight: 600 }}>{slower.riders?.name}</span>
+          <div style={{ background: GOLD + '18', border: `1px solid ${GOLD}33`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', marginBottom: 20 }}>
+            <span style={{ color: GOLD, fontWeight: 700 }}>{faster.riders?.name}</span>
+            <span style={{ color: MUTED }}> is </span>
+            <span style={{ color: GOLD, fontWeight: 900 }}>{delta}s</span>
+            <span style={{ color: MUTED }}> faster than </span>
+            <span style={{ color: TEXT, fontWeight: 600 }}>{slower.riders?.name}</span>
+          </div>
         </div>
 
         {/* Videos + offset controls */}
@@ -269,8 +274,9 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                       borderRadius: 8,
                       display: 'block',
                       background: '#000',
+                      transition: 'height 0.35s ease',
                       ...(isWide
-                        ? { height: 'calc(100vh - 340px)', width: 'auto' }
+                        ? { height: cinemaMode ? 'calc(100vh - 120px)' : 'calc(100vh - 340px)', width: 'auto' }
                         : { width: '100%' }),
                     }}
                     allow="autoplay; encrypted-media"
