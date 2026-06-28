@@ -30,9 +30,7 @@ export default function Home() {
   const [bikeFilter, setBikeFilter] = useState('')
   const [riderFilter, setRiderFilter] = useState('')
   const [modalVideo, setModalVideo] = useState(null)
-  const [showAllBikes, setShowAllBikes] = useState(false)
-  const [showAllMaps, setShowAllMaps] = useState(false)
-  const [showAllRiders, setShowAllRiders] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState(null)
   const [expandedMaps, setExpandedMaps] = useState({})
   const [expandedPodiums, setExpandedPodiums] = useState({})
   const [copiedId, setCopiedId] = useState(null)
@@ -78,6 +76,12 @@ export default function Home() {
       .select('name, image_url')
       .order('name')
       .then(({ data }) => setDbMaps(data || []))
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const m = params.get('map')
+    if (m) setMapFilter(m)
   }, [])
 
   useEffect(() => {
@@ -152,6 +156,9 @@ export default function Home() {
               <Link href="/training" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 {T.training}
               </Link>
+              <Link href="/maps" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
+                🗺 {T.maps}
+              </Link>
               <Link href="/news" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 {T.news}
               </Link>
@@ -163,39 +170,47 @@ export default function Home() {
         </div>
 
         {/* FILTERS */}
-        <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, padding: '12px 14px 8px' }}>
-          <FilterRow>
-            <Chip label={T.all_maps} icon="🏁" active={!mapFilter} onClick={() => setMapFilter('')} />
-            {(showAllMaps ? maps : maps.slice(0, 3)).map(m => (
-              <Chip key={m} label={m} active={mapFilter === m} onClick={() => setMapFilter(m)} />
-            ))}
-            {maps.length > 3 && (
-              <Chip label={showAllMaps ? '← Less' : `+${maps.length - 3}`} onClick={() => setShowAllMaps(v => !v)} />
-            )}
-          </FilterRow>
-          <FilterRow>
-            <Chip label={T.all_bikes} icon="🏍" active={!bikeFilter} onClick={() => setBikeFilter('')} />
-            {(showAllBikes ? bikes : bikes.slice(0, 2)).map(b => (
-              <Chip key={b} label={b} active={bikeFilter === b} onClick={() => setBikeFilter(b)} />
-            ))}
-            {bikes.length > 2 && (
-              <Chip label={showAllBikes ? '← Less' : `+${bikes.length - 2}`} onClick={() => setShowAllBikes(v => !v)} />
-            )}
-          </FilterRow>
-          <FilterRow style={{ marginBottom: 0 }}>
-            <Chip label={T.all_riders} icon="👤" active={!riderFilter} onClick={() => setRiderFilter('')} />
-            {(showAllRiders ? riders : riders.slice(0, 2)).map(r => (
-              <Chip key={r} label={r} active={riderFilter === r} onClick={() => setRiderFilter(r)} />
-            ))}
-            {riders.length > 2 && (
-              <Chip label={showAllRiders ? '← Less' : `+${riders.length - 2}`} onClick={() => setShowAllRiders(v => !v)} />
-            )}
-          </FilterRow>
-          {hasFilters && (
-            <button onClick={() => { setMapFilter(''); setBikeFilter(''); setRiderFilter('') }} style={{ marginTop: 8, background: 'none', border: 'none', color: '#ff6b6b', fontSize: 12, cursor: 'pointer', padding: '4px 0', display: 'block' }}>
-              {T.clear_filters}
-            </button>
+        <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, padding: '10px 14px' }}>
+          {openDropdown && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 100 }} onClick={() => setOpenDropdown(null)} />
           )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <FilterDropdown
+              icon="🏁"
+              label={T.all_maps}
+              value={mapFilter}
+              options={maps}
+              open={openDropdown === 'map'}
+              onToggle={() => setOpenDropdown(openDropdown === 'map' ? null : 'map')}
+              onSelect={v => { setMapFilter(v); setOpenDropdown(null) }}
+              onClear={() => { setMapFilter(''); setOpenDropdown(null) }}
+            />
+            <FilterDropdown
+              icon="🏍"
+              label={T.all_bikes}
+              value={bikeFilter}
+              options={bikes}
+              open={openDropdown === 'bike'}
+              onToggle={() => setOpenDropdown(openDropdown === 'bike' ? null : 'bike')}
+              onSelect={v => { setBikeFilter(v); setOpenDropdown(null) }}
+              onClear={() => { setBikeFilter(''); setOpenDropdown(null) }}
+            />
+            <FilterDropdown
+              icon="👤"
+              label={T.all_riders}
+              value={riderFilter}
+              options={riders}
+              open={openDropdown === 'rider'}
+              onToggle={() => setOpenDropdown(openDropdown === 'rider' ? null : 'rider')}
+              onSelect={v => { setRiderFilter(v); setOpenDropdown(null) }}
+              onClear={() => { setRiderFilter(''); setOpenDropdown(null) }}
+            />
+            {hasFilters && (
+              <button onClick={() => { setMapFilter(''); setBikeFilter(''); setRiderFilter('') }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ff6b6b', fontSize: 12, cursor: 'pointer', padding: '4px 8px', flexShrink: 0 }}>
+                {T.clear_filters}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* PER-MAP SECTIONS */}
@@ -413,8 +428,49 @@ function ToggleBtn({ active, onClick, children }) {
   )
 }
 
-function FilterRow({ children, style }) {
-  return <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, ...style }}>{children}</div>
+function FilterDropdown({ icon, label, value, options, open, onToggle, onSelect, onClear }) {
+  const display = value ? (value.length > 15 ? value.slice(0, 13) + '…' : value) : label
+  return (
+    <div style={{ position: 'relative', zIndex: open ? 200 : 'auto' }}>
+      <button onClick={onToggle} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '7px 10px', height: 34, borderRadius: 8,
+        border: `1px solid ${value ? GREEN : BORDER}`,
+        background: value ? 'rgba(0,255,153,0.1)' : 'rgba(255,255,255,0.03)',
+        color: value ? GREEN : MUTED, cursor: 'pointer', fontSize: 12,
+        fontWeight: value ? 600 : 400, whiteSpace: 'nowrap',
+      }}>
+        {icon} {display} <span style={{ fontSize: 9, opacity: 0.55, marginLeft: 2 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 200,
+          background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10,
+          minWidth: 160, maxHeight: 260, overflowY: 'auto',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        }}>
+          <button onClick={onClear} style={{
+            display: 'flex', width: '100%', textAlign: 'left', padding: '10px 14px',
+            background: !value ? 'rgba(0,255,153,0.08)' : 'none',
+            border: 'none', borderBottom: `1px solid ${BORDER}`,
+            color: !value ? GREEN : MUTED, cursor: 'pointer', fontSize: 13,
+          }}>
+            {label}
+          </button>
+          {options.map(opt => (
+            <button key={opt} onClick={() => onSelect(opt)} style={{
+              display: 'flex', width: '100%', textAlign: 'left', padding: '10px 14px',
+              background: value === opt ? 'rgba(0,255,153,0.08)' : 'none',
+              border: 'none', borderBottom: `1px solid ${BORDER}30`,
+              color: value === opt ? GREEN : TEXT, cursor: 'pointer', fontSize: 13,
+            }}>
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function FooterLink({ href, label, accent }) {
@@ -425,11 +481,3 @@ function FooterLink({ href, label, accent }) {
   )
 }
 
-function Chip({ label, icon, active, onClick }) {
-  return (
-    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', height: 30, borderRadius: 20, border: `1px solid ${active ? GREEN : BORDER}`, background: active ? 'rgba(0,255,153,0.12)' : 'transparent', color: active ? GREEN : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap' }}>
-      {icon && <span style={{ marginRight: 2 }}>{icon}</span>}
-      {label}
-    </button>
-  )
-}
