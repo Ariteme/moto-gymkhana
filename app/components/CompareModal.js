@@ -180,7 +180,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, overflowY: isWide ? 'hidden' : 'auto', WebkitOverflowScrolling: 'touch' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
     >
       <div
         onClick={e => e.stopPropagation()}
@@ -270,7 +270,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                       display: 'block',
                       background: '#000',
                       ...(isWide
-                        ? { height: 'calc(100vh - 230px)', width: 'auto' }
+                        ? { height: 'calc(100vh - 340px)', width: 'auto' }
                         : { width: '100%' }),
                     }}
                     allow="autoplay; encrypted-media"
