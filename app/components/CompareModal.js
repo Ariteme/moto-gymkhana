@@ -33,8 +33,11 @@ function ytCmd(iframeRef, func, args = []) {
 export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 = 0 }) {
   const ref1 = useRef(null)
   const ref2 = useRef(null)
-  const [t1, setT1] = useState(initialT1)
-  const [t2, setT2] = useState(initialT2)
+  // Raw string state so the input field can be fully cleared before retyping
+  const [rawT1, setRawT1] = useState(String(initialT1))
+  const [rawT2, setRawT2] = useState(String(initialT2))
+  const t1 = Math.max(0, parseInt(rawT1, 10) || 0)
+  const t2 = Math.max(0, parseInt(rawT2, 10) || 0)
   const [copied, setCopied] = useState(false)
   const seeked = useRef(false)
 
@@ -57,9 +60,14 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     const handler = e => setIsLandscape(e.matches)
     mq.addEventListener('change', handler)
     screen.orientation?.lock?.('landscape').catch(() => {})
+
+    // Prevent background page from scrolling while modal is open
+    document.body.style.overflow = 'hidden'
+
     return () => {
       mq.removeEventListener('change', handler)
       screen.orientation?.unlock?.()
+      document.body.style.overflow = ''
     }
   }, [])
 
@@ -158,8 +166,8 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   }
 
   const videos = [
-    { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1, live: liveT1 },
-    { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2, live: liveT2 },
+    { ref: ref1, vid: vid1, run: run1, rawT: rawT1, setRawT: setRawT1, live: liveT1 },
+    { ref: ref2, vid: vid2, run: run2, rawT: rawT2, setRawT: setRawT2, live: liveT2 },
   ]
 
   return (
@@ -240,7 +248,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {videos.map(({ ref, vid, run, t, setT, live }) => (
+              {videos.map(({ ref, vid, run, rawT, setRawT, live }) => (
                 <div key={run.id}>
                   <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
@@ -255,17 +263,17 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <span style={{ fontSize: 11, color: MUTED }}>Start at</span>
                     <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={t}
-                      onChange={e => { seeked.current = false; setT(Math.max(0, Number(e.target.value))) }}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={rawT}
+                      onChange={e => { seeked.current = false; setRawT(e.target.value.replace(/[^0-9]/g, '')) }}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: 11, color: MUTED }}>s</span>
                     {live !== null && (
                       <button
-                        onClick={() => { seeked.current = false; setT(live) }}
+                        onClick={() => { seeked.current = false; setRawT(String(live)) }}
                         title="Capture current video time"
                         style={{ background: BLUE + '22', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 7px', color: BLUE, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
                       >
