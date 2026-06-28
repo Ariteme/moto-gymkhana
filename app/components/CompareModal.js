@@ -230,7 +230,6 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
   // ── Playback controls ──────────────────────────────────────────────────────
   const playBoth = useCallback(() => {
-    setCinemaMode(true)
     if (!seeked.current) {
       ytCmd(ref1, 'seekTo', [t1, true]); ytCmd(ref2, 'seekTo', [t2, true])
       seeked.current = true
@@ -241,12 +240,10 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   }, [t1, t2])
 
   const pauseBoth = useCallback(() => {
-    setCinemaMode(false)
     ytCmd(ref1, 'pauseVideo'); ytCmd(ref2, 'pauseVideo')
   }, [])
 
   const restartBoth = useCallback(() => {
-    setCinemaMode(true)
     seeked.current = true
     ytCmd(ref1, 'seekTo', [t1, true]); ytCmd(ref2, 'seekTo', [t2, true])
     setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
@@ -279,7 +276,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
   return (
     <div
-      onClick={onClose}
+      onClick={cinemaMode ? () => setCinemaMode(false) : onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
     >
       <div
@@ -332,7 +329,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
         {/* Videos */}
         {bothHaveVideo && (
           <>
-            {/* Sync controls + share */}
+            {/* Sync controls + cinema toggle + share */}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
               {[
                 { label: '⏮ Restart', fn: restartBoth },
@@ -343,6 +340,14 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                   {label}
                 </button>
               ))}
+              <div style={{ width: 1, height: 28, background: BORDER }} />
+              <button
+                onClick={() => setCinemaMode(v => !v)}
+                title={cinemaMode ? 'Show stats' : 'Hide stats / expand videos'}
+                style={{ background: cinemaMode ? BLUE + '22' : CARD, border: `1px solid ${cinemaMode ? BLUE + '66' : BORDER}`, borderRadius: 8, padding: '8px 12px', color: cinemaMode ? BLUE : MUTED, cursor: 'pointer', fontSize: 13 }}
+              >
+                {cinemaMode ? '▼' : '▲'}
+              </button>
               <div style={{ width: 1, height: 28, background: BORDER }} />
               <button
                 onClick={handleShare}
