@@ -48,6 +48,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const seenIds = useRef([])
 
   const [isLandscape, setIsLandscape] = useState(true)
+  const [isWide, setIsWide] = useState(false)
 
   const [run1, run2] = runs
   const vid1 = ytId(run1?.youtube_url)
@@ -59,6 +60,11 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     setIsLandscape(mq.matches)
     const handler = e => setIsLandscape(e.matches)
     mq.addEventListener('change', handler)
+
+    const mqWide = window.matchMedia('(min-width: 900px)')
+    setIsWide(mqWide.matches)
+    const handlerWide = e => setIsWide(e.matches)
+    mqWide.addEventListener('change', handlerWide)
     screen.orientation?.lock?.('landscape').catch(() => {})
 
     // Prevent background page from scrolling while modal is open
@@ -66,6 +72,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
     return () => {
       mq.removeEventListener('change', handler)
+      mqWide.removeEventListener('change', handlerWide)
       screen.orientation?.unlock?.()
       document.body.style.overflow = ''
     }
@@ -173,11 +180,11 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, overflowY: isWide ? 'hidden' : 'auto', WebkitOverflowScrolling: 'touch' }}
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: 700, margin: '0 auto', padding: '16px 12px 40px', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}
+        style={{ maxWidth: isWide ? 'none' : 700, margin: '0 auto', padding: isWide ? '12px 24px 16px' : '16px 12px 40px', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}
       >
 
         {/* Header */}
@@ -247,16 +254,25 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isWide ? 16 : 6 }}>
               {videos.map(({ ref, vid, run, rawT, setRawT, live }) => (
-                <div key={run.id}>
-                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div key={run.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isWide ? '300px' : '100%' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
                   </div>
                   <iframe
                     ref={ref}
                     src={`https://www.youtube.com/embed/${vid}?enablejsapi=1&rel=0&modestbranding=1`}
-                    style={{ width: '100%', aspectRatio: '9/16', border: 'none', borderRadius: 8, display: 'block', background: '#000' }}
+                    style={{
+                      aspectRatio: '9/16',
+                      border: 'none',
+                      borderRadius: 8,
+                      display: 'block',
+                      background: '#000',
+                      ...(isWide
+                        ? { height: 'calc(100vh - 230px)', width: 'auto' }
+                        : { width: '100%' }),
+                    }}
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                   />
