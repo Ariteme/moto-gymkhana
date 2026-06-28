@@ -66,16 +66,16 @@ function CompareTable({ run1, run2 }) {
     <div style={{ background: CARD, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 14 }}>
 
       {/* Header: rider names */}
-      <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 1fr', background: '#080e18', borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', background: '#080e18', borderBottom: `1px solid ${BORDER}` }}>
         <div />
         {[run1, run2].map(run => {
           const isFaster = run === faster
           return (
-            <div key={run.id} style={{ padding: '10px 14px', borderLeft: colBorder, borderTop: `3px solid ${isFaster ? GREEN : BORDER}` }}>
-              <div style={{ color: isFaster ? GREEN : TEXT, fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div key={run.id} style={{ padding: '7px 10px', borderLeft: colBorder, borderTop: `3px solid ${isFaster ? GREEN : BORDER}`, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <div style={{ color: isFaster ? GREEN : TEXT, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {run.riders?.name}
               </div>
-              {isFaster && <div style={{ fontSize: 10, color: GREEN, fontWeight: 600, letterSpacing: 1, marginTop: 2 }}>FASTER ✓</div>}
+              {isFaster && <span style={{ fontSize: 9, color: GREEN, fontWeight: 700, letterSpacing: 0.5, flexShrink: 0 }}>✓</span>}
             </div>
           )
         })}
@@ -83,7 +83,7 @@ function CompareTable({ run1, run2 }) {
 
       {/* Data rows */}
       {rows.map(({ label, v1, v2, big }, i) => (
-        <div key={label} style={{ display: 'grid', gridTemplateColumns: '70px 1fr 1fr', borderBottom: i < rows.length - 1 ? colBorder : 'none' }}>
+        <div key={label} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', borderBottom: i < rows.length - 1 ? colBorder : 'none' }}>
           <div style={colLabel}>{label}</div>
           <div style={{ padding: '9px 14px', borderLeft: colBorder, color: big && run1 === faster ? GREEN : TEXT, fontWeight: big ? 800 : 400, fontSize: big ? 20 : 13, display: 'flex', alignItems: 'center' }}>{v1}</div>
           <div style={{ padding: '9px 14px', borderLeft: colBorder, color: big && run2 === faster ? GREEN : TEXT, fontWeight: big ? 800 : 400, fontSize: big ? 20 : 13, display: 'flex', alignItems: 'center' }}>{v2}</div>
@@ -406,7 +406,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
             </div>
 
             <div style={{ marginTop: 10, textAlign: 'center', fontSize: 11, color: MUTED }}>
-              Play → pause at sync point → tap 📍 to capture · ⏮ Restart syncs both
+              Play each video, pause where you want the sync to start, tap 📍 to save that moment — then ⏮ Restart plays both together from those points.
             </div>
           </>
         )}
