@@ -96,6 +96,20 @@ export default function Home() {
     .filter(r => !bikeFilter || r.bike === bikeFilter)
     .filter(r => !riderFilter || r.riders?.name === riderFilter)
 
+  // Rank of each rider's best run (unique riders only, sorted by lap_time)
+  const riderRankMap = (() => {
+    const seen = new Set()
+    const map = {}
+    let rank = 0
+    for (const r of filteredData) {
+      const n = r.riders?.name
+      if (!n || seen.has(n)) continue
+      seen.add(n)
+      map[n] = rank++
+    }
+    return map
+  })()
+
   const podiumMaps = mapFilter
     ? [mapFilter]
     : [...new Set(filteredData.map(r => r.map_name))].filter(Boolean).sort()
@@ -186,7 +200,11 @@ export default function Home() {
 
         {/* PER-MAP SECTIONS */}
         {podiumMaps.map(mapName => {
-          const top3 = filteredData.filter(r => r.map_name === mapName).slice(0, 3)
+          const seenRiders = new Set()
+          const top3 = filteredData
+            .filter(r => r.map_name === mapName)
+            .filter(r => { const n = r.riders?.name; if (!n || seenRiders.has(n)) return false; seenRiders.add(n); return true })
+            .slice(0, 3)
           if (top3.length === 0) return null
           const mapImage = dbMaps.find(m => m.name === mapName)?.image_url
           const mapOpen = !!expandedMaps[mapName]
@@ -275,7 +293,8 @@ export default function Home() {
               </div>
               {filteredData.map((r, i) => {
                 const videoId = ytId(r.youtube_url)
-                const rankColor = i === 0 ? GOLD : i === 1 ? SILVER : i === 2 ? BRONZE : null
+                const riderRank = riderRankMap[r.riders?.name]
+                const rankColor = riderRank === 0 ? GOLD : riderRank === 1 ? SILVER : riderRank === 2 ? BRONZE : null
 
                 return videoId ? (
                   <div key={r.id} style={{ background: CARD, borderRadius: 14, marginBottom: 10, overflow: 'hidden', border: `1px solid ${rankColor ? rankColor + '40' : BORDER}` }}>
