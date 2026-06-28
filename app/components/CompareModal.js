@@ -36,29 +36,70 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const [t1, setT1] = useState(initialT1)
   const [t2, setT2] = useState(initialT2)
   const [copied, setCopied] = useState(false)
-  // false until the first seek happens; reset whenever offsets change
   const seeked = useRef(false)
 
+  // Live current-time display per video, read from YouTube postMessage
+  const [liveT1, setLiveT1] = useState(null)
+  const [liveT2, setLiveT2] = useState(null)
+  const playerIdMap = useRef({})  // msgId -> 'p1' | 'p2'
+  const seenIds = useRef([])
+
   const [isLandscape, setIsLandscape] = useState(true)
+
+  const [run1, run2] = runs
+  const vid1 = ytId(run1?.youtube_url)
+  const vid2 = ytId(run2?.youtube_url)
+  const bothHaveVideo = vid1 && vid2
+
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
     setIsLandscape(mq.matches)
     const handler = e => setIsLandscape(e.matches)
     mq.addEventListener('change', handler)
-
-    // Try to lock to landscape for comparison — not supported on iOS
     screen.orientation?.lock?.('landscape').catch(() => {})
-
     return () => {
       mq.removeEventListener('change', handler)
       screen.orientation?.unlock?.()
     }
   }, [])
 
-  const [run1, run2] = runs
-  const vid1 = ytId(run1?.youtube_url)
-  const vid2 = ytId(run2?.youtube_url)
-  const bothHaveVideo = vid1 && vid2
+  // Subscribe both iframes to YouTube info delivery so we can read current time
+  useEffect(() => {
+    if (!bothHaveVideo) return
+
+    // Give iframes time to load before subscribing
+    const subTimer = setTimeout(() => {
+      ref1.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), 'https://www.youtube.com')
+      ref2.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), 'https://www.youtube.com')
+    }, 2500)
+
+    const handler = (event) => {
+      if (event.origin !== 'https://www.youtube.com') return
+      let data
+      try { data = JSON.parse(event.data) } catch { return }
+
+      const msgId = data.id
+      if (msgId === undefined) return
+
+      // Assign first-seen ID to p1, second to p2 (iframes load in DOM order)
+      if (!playerIdMap.current[msgId]) {
+        seenIds.current.push(msgId)
+        playerIdMap.current[msgId] = seenIds.current.length === 1 ? 'p1' : 'p2'
+      }
+
+      if (data.event === 'infoDelivery' && data.info?.currentTime !== undefined) {
+        const secs = Math.floor(data.info.currentTime)
+        if (playerIdMap.current[msgId] === 'p1') setLiveT1(prev => prev === secs ? prev : secs)
+        else if (playerIdMap.current[msgId] === 'p2') setLiveT2(prev => prev === secs ? prev : secs)
+      }
+    }
+
+    window.addEventListener('message', handler)
+    return () => {
+      clearTimeout(subTimer)
+      window.removeEventListener('message', handler)
+    }
+  }, [bothHaveVideo])
 
   const time1 = Number(run1?.lap_time)
   const time2 = Number(run2?.lap_time)
@@ -66,7 +107,6 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const faster = time1 <= time2 ? run1 : run2
   const slower = time1 <= time2 ? run2 : run1
 
-  // First play seeks to offsets; subsequent plays (after pause) resume from current position
   const playBoth = useCallback(() => {
     if (!seeked.current) {
       ytCmd(ref1, 'seekTo', [t1, true])
@@ -84,15 +124,11 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     ytCmd(ref2, 'pauseVideo')
   }, [])
 
-  // Always seek back to offsets and replay
   const restartBoth = useCallback(() => {
     seeked.current = true
     ytCmd(ref1, 'seekTo', [t1, true])
     ytCmd(ref2, 'seekTo', [t2, true])
-    setTimeout(() => {
-      ytCmd(ref1, 'playVideo')
-      ytCmd(ref2, 'playVideo')
-    }, 150)
+    setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
   }, [t1, t2])
 
   const handleShare = useCallback(async () => {
@@ -120,6 +156,11 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     fontSize: 13,
     textAlign: 'center',
   }
+
+  const videos = [
+    { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1, live: liveT1 },
+    { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2, live: liveT2 },
+  ]
 
   return (
     <div
@@ -172,7 +213,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
         {/* Videos + offset controls */}
         {bothHaveVideo && (
           <>
-            {/* Sync controls + share button */}
+            {/* Sync controls + share */}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
               {[
                 { label: '⏮ Restart', fn: restartBoth },
@@ -192,19 +233,14 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
               </button>
             </div>
 
-            {/* Portrait hint — shown when orientation lock isn't supported (e.g. iOS) */}
             {!isLandscape && (
               <div style={{ textAlign: 'center', padding: '7px 12px', background: GOLD + '18', border: `1px solid ${GOLD}33`, borderRadius: 8, marginBottom: 10, fontSize: 12, color: GOLD }}>
                 🔄 Rotate your phone for a better view
               </div>
             )}
 
-            {/* Always side-by-side so both videos are visible simultaneously */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {[
-                { ref: ref1, vid: vid1, run: run1, t: t1, setT: setT1 },
-                { ref: ref2, vid: vid2, run: run2, t: t2, setT: setT2 },
-              ].map(({ ref, vid, run, t, setT }) => (
+              {videos.map(({ ref, vid, run, t, setT, live }) => (
                 <div key={run.id}>
                   <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
@@ -227,13 +263,22 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                       style={inputStyle}
                     />
                     <span style={{ fontSize: 11, color: MUTED }}>s</span>
+                    {live !== null && (
+                      <button
+                        onClick={() => { seeked.current = false; setT(live) }}
+                        title="Capture current video time"
+                        style={{ background: BLUE + '22', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 7px', color: BLUE, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                      >
+                        📍 {live}s
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{ marginTop: 10, textAlign: 'center', fontSize: 11, color: MUTED }}>
-              Set start times → tap ⏮ Restart to sync · 🔗 Share locks in your timecodes
+              Play → pause at sync point → tap 📍 to capture · ⏮ Restart syncs both
             </div>
           </>
         )}
