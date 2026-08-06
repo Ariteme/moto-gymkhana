@@ -45,5 +45,12 @@ node_modules
 
 # local MCP config (contains secrets)
 .mcp.json
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env.test
 /gymkhana-logo.png
 logo_nobg_preview.png

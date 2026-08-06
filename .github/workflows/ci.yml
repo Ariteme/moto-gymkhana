@@ -1,0 +1,71 @@
+# CI Pipeline — runs on every push and pull request
+#
+# Stages (like Jenkins stages):
+#   1. lint      — check JavaScript code style
+#   2. test      — run Python pytest suite
+#   3. build     — verify Next.js builds without errors
+#
+# If any stage fails, Vercel deployment is blocked by GitHub status checks.
+# (You need to enable "Required status checks" in GitHub branch protection settings.)
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint-and-test:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Set up Node.js (needed for lint + build)
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Install JS dependencies
+      - name: Install JS dependencies
+        run: npm ci
+
+      # 4. Run ESLint
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      # 5. Set up Python (needed for pytest)
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # 6. Install Python test dependencies
+      - name: Install Python dependencies
+        run: pip install -r requirements-test.txt
+
+      # 7. Run pytest
+      #    Supabase credentials come from GitHub repository secrets.
+      #    Go to: GitHub repo → Settings → Secrets and variables → Actions
+      #    Add: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+      - name: Run pytest
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          APP_URL: https://moto-gymkhana.vercel.app
+        run: pytest tests/ -v --tb=short
+
+      # 8. Verify Next.js builds successfully
+      - name: Build (Next.js)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
