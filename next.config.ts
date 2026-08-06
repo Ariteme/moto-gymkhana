@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // standalone mode copies only production dependencies into .next/standalone
-  // so Docker images don't need node_modules (much smaller image)
-  output: 'standalone',
+  // standalone output only when building for Docker — Vercel has its own infra
+  ...(process.env.BUILD_STANDALONE === '1' && { output: 'standalone' }),
   images: {
     remotePatterns: [{
       protocol: 'https',
