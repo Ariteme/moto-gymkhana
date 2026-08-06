@@ -314,6 +314,7 @@ export default function Home() {
                 return videoId ? (
                   <div key={r.id} style={{ background: CARD, borderRadius: 14, marginBottom: 10, overflow: 'hidden', border: `1px solid ${rankColor ? rankColor + '40' : BORDER}` }}>
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setModalVideo(videoId)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} alt="Run video" />
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.72) 100%)' }} />
                       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -60%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -176,6 +176,7 @@ export default function RiderProfile({ params }) {
                 <div key={r.id} style={{ background: CARD, borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
                   {videoId && (
                     <a href={r.youtube_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', position: 'relative' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} alt="Run video" />
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.65) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

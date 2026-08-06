@@ -91,6 +91,7 @@ export default function Training() {
             <div key={video.id} style={{ background: CARD, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 12 }}>
               {vid && (
                 <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setModalVideo(vid)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt={videoTitle(video)} style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
