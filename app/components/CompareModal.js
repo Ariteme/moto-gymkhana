@@ -46,7 +46,6 @@ function CompareTable({ run1, run2 }) {
   const t2 = Number(run2.lap_time)
   const delta   = Math.abs(t1 - t2).toFixed(2)
   const faster  = t1 <= t2 ? run1 : run2
-  const slower  = t1 <= t2 ? run2 : run1
 
   const rows = [
     { label: 'TIME', v1: `${t1.toFixed(2)}s`, v2: `${t2.toFixed(2)}s`, big: true },
@@ -138,6 +137,12 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const vid2 = ytId(activeRun2?.youtube_url)
   const bothHaveVideo = vid1 && vid2
 
+  // Extracted for stable useEffect deps (avoids optional-chaining in dep arrays)
+  const run0Id     = runs[0]?.id
+  const run1Id     = runs[1]?.id
+  const riderName1 = runs[0]?.riders?.name
+  const riderName2 = runs[1]?.riders?.name
+
   // ── Orientation / body scroll lock ────────────────────────────────────────
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
@@ -163,21 +168,19 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
   // ── Fetch all runs for both riders (for map switching) ────────────────────
   useEffect(() => {
-    const name1 = runs[0]?.riders?.name
-    const name2 = runs[1]?.riders?.name
-    if (!name1 || !name2) return
+    if (!riderName1 || !riderName2) return
 
     Promise.all([
       supabase.from('results')
         .select('id, map_name, lap_time, bike, youtube_url, created_at, riders!inner(name)')
-        .eq('approved', true).eq('riders.name', name1),
+        .eq('approved', true).eq('riders.name', riderName1),
       supabase.from('results')
         .select('id, map_name, lap_time, bike, youtube_url, created_at, riders!inner(name)')
-        .eq('approved', true).eq('riders.name', name2),
+        .eq('approved', true).eq('riders.name', riderName2),
     ]).then(([res1, res2]) => {
       setRiderMaps({ r1: bestPerMap(res1.data), r2: bestPerMap(res2.data) })
     })
-  }, [runs[0]?.id, runs[1]?.id])
+  }, [run0Id, run1Id, riderName1, riderName2])
 
   // Maps where BOTH riders have an approved run
   const commonMaps = riderMaps
@@ -200,7 +203,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
 
   // ── YouTube postMessage live timecode ──────────────────────────────────────
   useEffect(() => {
-    if (!bothHaveVideo) return
+    if (!vid1 || !vid2) return
 
     const subTimer = setTimeout(() => {
       ref1.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), 'https://www.youtube.com')

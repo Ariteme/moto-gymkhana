@@ -361,6 +361,7 @@ export default function Admin() {
                     <div key={v.id} style={{ background: CARD, borderRadius: 12, marginBottom: 10, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 12, padding: '12px 14px' }}>
                         {vid && (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={`https://img.youtube.com/vi/${vid}/default.jpg`}
                             style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} alt="" />
                         )}

@@ -106,6 +106,7 @@ export default function News() {
               <div style={{ display: 'grid', gridTemplateColumns: post.photos.length === 1 ? '1fr' : '1fr 1fr', gap: 2 }}>
                 {post.photos.slice(0, 4).map((src, i) => (
                   <a key={i} href={post.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" style={{ width: '100%', display: 'block', aspectRatio: post.photos.length === 1 ? '16/9' : '1/1', objectFit: 'cover' }} />
                   </a>
                 ))}
