@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Reading localStorage/sessionStorage inside useEffect is required in Next.js
+      // to avoid SSR crashes — these APIs don't exist on the server.
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ]);
 
 export default eslintConfig;

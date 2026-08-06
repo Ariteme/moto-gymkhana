@@ -24,7 +24,6 @@ export default function Image() {
       >
         {/* Left: logo */}
         <div style={{ width: 560, height: 630, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoBase64} width={520} height={520} style={{ objectFit: 'contain' }} alt="" />
         </div>
 

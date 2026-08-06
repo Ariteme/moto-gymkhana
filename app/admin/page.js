@@ -53,10 +53,6 @@ export default function Admin() {
     }
   }, [])
 
-  useEffect(() => {
-    if (authed) fetchAll()
-  }, [authed])
-
   const fetchAll = async () => {
     const [{ data: results }, { data: riderRows }, { data: tvRows }] = await Promise.all([
       supabase.from('results').select('id, map_name, lap_time, bike, youtube_url, approved, created_at, riders(name, id)').order('created_at', { ascending: false }),
@@ -67,6 +63,10 @@ export default function Admin() {
     setRiders(riderRows || [])
     setTrainingVideos(tvRows || [])
   }
+
+  useEffect(() => {
+    if (authed) fetchAll()
+  }, [authed])
 
   const handleLogin = async (e) => {
     e.preventDefault()
