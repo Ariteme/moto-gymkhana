@@ -26,7 +26,7 @@ export default function MapsPage() {
   useEffect(() => {
     Promise.all([
       supabase.from('maps').select('name, image_url').order('name'),
-      supabase.from('results').select('map_name, lap_time, riders(name)').eq('approved', true),
+      supabase.from('results').select('map_name, lap_time, riders(name, number)').eq('approved', true),
     ]).then(([mapsRes, runsRes]) => {
       const dbMaps = mapsRes.data || []
       const runs = runsRes.data || []
@@ -39,7 +39,7 @@ export default function MapsPage() {
         s.totalRuns++
         if (r.riders?.name) s.riders.add(r.riders.name)
         const t = Number(r.lap_time)
-        if (t < s.bestTime) { s.bestTime = t; s.bestRider = r.riders?.name }
+        if (t < s.bestTime) { s.bestTime = t; s.bestRider = r.riders?.name; s.bestRiderNumber = r.riders?.number ?? null }
       }
 
       setMaps(dbMaps.map(m => ({
@@ -49,6 +49,7 @@ export default function MapsPage() {
         uniqueRiders: stats[m.name]?.riders.size ?? 0,
         bestTime: stats[m.name]?.bestTime < Infinity ? stats[m.name].bestTime : null,
         bestRider: stats[m.name]?.bestRider ?? null,
+        bestRiderNumber: stats[m.name]?.bestRiderNumber ?? null,
       })))
       setLoading(false)
     })
@@ -125,7 +126,8 @@ function MapCard({ map, lang }) {
                 {map.bestTime.toFixed(2)}s
               </div>
               {map.bestRider && (
-                <div style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>
+                <div style={{ fontSize: 12, color: MUTED, marginTop: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {map.bestRiderNumber && <span style={{ fontSize: 11, fontWeight: 700, color: GOLD }}>#{map.bestRiderNumber}</span>}
                   {map.bestRider}
                 </div>
               )}

@@ -31,7 +31,7 @@ export default function RiderProfile({ params }) {
   useEffect(() => {
     supabase
       .from('results')
-      .select('id, map_name, lap_time, bike, youtube_url, created_at, riders!inner(name)')
+      .select('id, map_name, lap_time, bike, youtube_url, created_at, riders!inner(name, number)')
       .eq('approved', true)
       .eq('riders.name', riderName)
       .order('created_at', { ascending: true })
@@ -45,6 +45,7 @@ export default function RiderProfile({ params }) {
   const sortedMaps = Object.entries(bestPerMap).sort((a, b) => a[0].localeCompare(b[0]))
   const overallBest = runs.length ? [...runs].sort((a, b) => a.lap_time - b.lap_time)[0] : null
   const bikes = [...new Set(runs.map(r => r.bike).filter(Boolean))]
+  const riderNumber = runs[0]?.riders?.number ?? null
   const initials = riderName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   const filteredRuns = mapFilter ? runs.filter(r => r.map_name === mapFilter) : runs
@@ -98,8 +99,15 @@ export default function RiderProfile({ params }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg, ${BLUE}, ${GREEN})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#000', flexShrink: 0 }}>
-              {initials}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg, ${BLUE}, ${GREEN})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#000' }}>
+                {initials}
+              </div>
+              {riderNumber && (
+                <div style={{ position: 'absolute', bottom: -4, right: -8, background: GOLD, color: '#000', fontSize: 11, fontWeight: 900, borderRadius: 6, padding: '1px 6px', lineHeight: 1.6 }}>
+                  #{riderNumber}
+                </div>
+              )}
             </div>
             <div>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: TEXT }}>{riderName}</h1>

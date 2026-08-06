@@ -66,7 +66,7 @@ export default function Home() {
   useEffect(() => {
     supabase
       .from('results')
-      .select('id, map_name, lap_time, bike, youtube_url, created_at, riders(name)')
+      .select('id, map_name, lap_time, bike, youtube_url, created_at, riders(name, number)')
       .eq('approved', true)
       .order('lap_time', { ascending: true })
       .then(({ data }) => setData(data || []))
@@ -267,7 +267,8 @@ export default function Home() {
                           boxShadow: `0 0 28px ${medal.glow}`,
                         }}>
                           <div style={{ fontSize: first ? 34 : 26, lineHeight: 1 }}>{medal.emoji}</div>
-                          <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 13, marginTop: 6, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>
+                          {r.riders?.number && <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginTop: 4 }}>#{r.riders.number}</div>}
+                          <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 13, marginTop: 2, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>
                             {r.riders?.name}
                           </Link>
                           <div style={{ color: medal.color, fontSize: first ? 20 : 17, fontWeight: 800, marginTop: 3 }}>
@@ -323,6 +324,7 @@ export default function Home() {
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 12px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <RankBadge rank={i + 1} color={rankColor} small />
+                          {r.riders?.number && <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginRight: 4 }}>#{r.riders.number}</span>}
                           <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 15, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', textDecoration: 'none' }}>{r.riders?.name}</Link>
                         </div>
                         <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
@@ -342,7 +344,10 @@ export default function Home() {
                   <div key={r.id} style={{ background: CARD, borderRadius: 12, padding: '13px 14px', marginBottom: 8, border: `1px solid ${rankColor ? rankColor + '40' : BORDER}`, borderLeft: `3px solid ${rankColor || BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <RankBadge rank={i + 1} color={rankColor} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{r.riders?.name}</Link>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
+                        {r.riders?.number && <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>#{r.riders.number}</span>}
+                        <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 16, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{r.riders?.name}</Link>
+                      </div>
                       <div style={{ fontSize: 12, color: MUTED, marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <span>🏁 {r.map_name}</span>
                         {r.bike && <span>🏍 {r.bike}</span>}
