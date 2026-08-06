@@ -48,7 +48,6 @@ const GREEN = '#00ff99'
 const BLUE = '#1a5cff'
 const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
-const RED = '#ff4757'
 const ORANGE = '#ffa502'
 
 function levenshtein(a, b) {
@@ -63,17 +62,15 @@ function levenshtein(a, b) {
 export default function Submit() {
   const { lang } = useLang()
   const T = i18n[lang]
-  const [form, setForm] = useState({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
+  const [form, setForm] = useState({ name: '', number: '', bikeModel: '', map: '', time: '', youtube: '' })
 
   const [allRiders, setAllRiders] = useState([])
   const [riderSuggestions, setRiderSuggestions] = useState([])
   const [fuzzySuggestions, setFuzzySuggestions] = useState([])
 
-  const [plateStatus, setPlateStatus] = useState('idle')
   const [bikeSearch, setBikeSearch] = useState('')
-  const [plateDisplay, setPlateDisplay] = useState('')
 
-  const [maps, setMaps] = useState([])           // [{ name, image_url }]
+  const [maps, setMaps] = useState([])
   const [mapSearch, setMapSearch] = useState('')
   const [showMapDropdown, setShowMapDropdown] = useState(false)
 
@@ -115,26 +112,6 @@ export default function Submit() {
     setFuzzySuggestions([])
   }
 
-  const handlePlateChange = async (e) => {
-    const raw = e.target.value
-    if (!/^[\d\s-]*$/.test(raw)) return
-    setPlateDisplay(raw)
-    const digits = raw.replace(/[\s-]/g, '')
-    setForm(prev => ({ ...prev, plate: digits, bikeModel: '' }))
-    setBikeSearch('')
-    if (digits.length < 7) { setPlateStatus('idle'); return }
-    if (digits.length > 8) { setPlateStatus('invalid'); return }
-    setPlateStatus('loading')
-    const { data } = await supabase.from('bikes').select('model').eq('plate', digits).maybeSingle()
-    if (data) {
-      setForm(prev => ({ ...prev, bikeModel: data.model }))
-      setBikeSearch(data.model)
-      setPlateStatus('found')
-    } else {
-      setPlateStatus('new')
-    }
-  }
-
   const mapNames = maps.map(m => m.name)
   const filteredMaps = maps.filter(m => m.name.toLowerCase().includes(mapSearch.toLowerCase()))
   const selectedMapImage = maps.find(m => m.name === form.map)?.image_url
@@ -143,49 +120,44 @@ export default function Submit() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return alert('Please enter your name.')
-    if (form.plate.length !== 7 && form.plate.length !== 8) return alert('Please enter a valid plate number (7 or 8 digits).')
-    if (plateStatus === 'loading') return alert('Still looking up plate, please wait.')
-    if (plateStatus === 'invalid') return alert('Please enter a valid plate number.')
-    if (plateStatus === 'new' && !form.bikeModel.trim()) return alert('Please select your bike model.')
     if (!form.map.trim()) return alert('Please select or enter a map.')
     if (!form.time) return alert('Please enter a lap time.')
 
     try {
-      if (plateStatus === 'new') {
-        const { error } = await supabase.from('bikes').insert([{ plate: form.plate.trim(), model: form.bikeModel.trim() }])
-        if (error) { alert('Failed to register bike: ' + error.message); return }
-      }
       if (!mapNames.includes(form.map.trim())) {
         const { error } = await supabase.from('maps').insert([{ name: form.map.trim() }])
         if (error && error.code !== '23505') { alert('Failed to add map: ' + error.message); return }
       }
+
       let rider
       const { data: existing } = await supabase.from('riders').select('*').eq('name', form.name.trim()).maybeSingle()
       if (existing) {
         rider = existing
       } else {
+        const insertData = { name: form.name.trim() }
+        if (form.number) insertData.number = parseInt(form.number, 10)
         const { data: newRider, error } = await supabase
           .from('riders')
-          .insert([{ name: form.name.trim(), plate: form.plate.trim(), bike: form.bikeModel.trim() }])
+          .insert([insertData])
           .select().single()
         if (error) { alert('Failed to create rider: ' + error.message); return }
         rider = newRider
       }
+
       const { error } = await supabase.from('results').insert([{
         rider_id: rider.id,
         map_name: form.map.trim(),
         lap_time: parseFloat(form.time),
-        bike: form.bikeModel.trim(),
-        youtube_url: form.youtube,
+        bike: form.bikeModel.trim() || null,
+        youtube_url: form.youtube || null,
         approved: false
       }])
       if (error) { alert('Failed to submit result: ' + error.message); return }
+
       alert(T.submit_success)
-      setForm({ name: '', plate: '', bikeModel: '', map: '', time: '', youtube: '' })
+      setForm({ name: '', number: '', bikeModel: '', map: '', time: '', youtube: '' })
       setBikeSearch('')
       setMapSearch('')
-      setPlateStatus('idle')
-      setPlateDisplay('')
     } catch (err) {
       alert('Unexpected error: ' + err.message)
     }
@@ -248,66 +220,47 @@ export default function Submit() {
           )}
         </div>
 
-        {/* PLATE */}
-        <div style={{ marginBottom: plateStatus !== 'idle' ? 6 : 20 }}>
-          <FieldLabel extra={T.plate_hint}>{T.plate_number}</FieldLabel>
+        {/* PARTICIPANT NUMBER */}
+        <div style={{ marginBottom: 20 }}>
+          <FieldLabel extra={T.optional}>{T.participant_number}</FieldLabel>
           <input
-            placeholder="e.g. 123-45-678 or 12-345-67"
-            value={plateDisplay}
-            onChange={handlePlateChange}
-            inputMode="numeric"
-            style={{
-              ...inputStyle,
-              marginBottom: 0,
-              borderColor: plateStatus === 'invalid' ? RED
-                : plateStatus === 'found' ? GREEN
-                : plateStatus === 'new' ? ORANGE
-                : BORDER
+            placeholder={T.participant_number_placeholder}
+            value={form.number}
+            onChange={(e) => {
+              const v = e.target.value
+              if (!/^\d*$/.test(v)) return
+              setForm(prev => ({ ...prev, number: v }))
             }}
+            inputMode="numeric"
+            style={inputStyle}
           />
         </div>
-        {plateStatus !== 'idle' && (
-          <div style={{ marginBottom: 16 }}>
-            {plateStatus === 'loading' && <StatusBadge color={MUTED}>{T.plate_loading}</StatusBadge>}
-            {plateStatus === 'found' && <StatusBadge color={GREEN}>{T.plate_found} {form.bikeModel}</StatusBadge>}
-            {plateStatus === 'new' && <StatusBadge color={ORANGE}>{T.plate_new}</StatusBadge>}
-            {plateStatus === 'invalid' && <StatusBadge color={RED}>{T.plate_invalid}</StatusBadge>}
-          </div>
-        )}
 
         {/* BIKE MODEL */}
-        {(plateStatus === 'found' || plateStatus === 'new') && (
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <FieldLabel>{T.bike_model}</FieldLabel>
-            <input
-              placeholder={plateStatus === 'new' ? T.bike_search_placeholder : ''}
-              value={bikeSearch}
-              onChange={(e) => {
-                setBikeSearch(e.target.value)
-                setForm(prev => ({ ...prev, bikeModel: e.target.value }))
-              }}
-              readOnly={plateStatus === 'found'}
-              style={{
-                ...inputStyle,
-                background: plateStatus === 'found' ? '#0a1020' : CARD,
-                color: plateStatus === 'found' ? MUTED : TEXT,
-                cursor: plateStatus === 'found' ? 'default' : 'text',
-              }}
-            />
-            {plateStatus === 'new' && bikeSearch && filteredBikes.length > 0 && (
-              <DropList maxHeight={200}>
-                {filteredBikes.map(bike => (
-                  <DropItem key={bike} onClick={() => {
-                    setBikeSearch(bike)
-                    setForm(prev => ({ ...prev, bikeModel: bike }))
-                  }}>
-                    {bike}
-                  </DropItem>
-                ))}
-              </DropList>
-            )}
-          </div>
-        )}
+        <div style={{ marginBottom: 20, position: 'relative' }}>
+          <FieldLabel extra={T.optional}>{T.bike_model}</FieldLabel>
+          <input
+            placeholder={T.bike_search_placeholder}
+            value={bikeSearch}
+            onChange={(e) => {
+              setBikeSearch(e.target.value)
+              setForm(prev => ({ ...prev, bikeModel: e.target.value }))
+            }}
+            style={inputStyle}
+          />
+          {bikeSearch && filteredBikes.length > 0 && (
+            <DropList maxHeight={200}>
+              {filteredBikes.map(bike => (
+                <DropItem key={bike} onClick={() => {
+                  setBikeSearch(bike)
+                  setForm(prev => ({ ...prev, bikeModel: bike }))
+                }}>
+                  {bike}
+                </DropItem>
+              ))}
+            </DropList>
+          )}
+        </div>
 
         {/* MAP */}
         <div style={{ marginBottom: selectedMapImage ? 12 : 20, position: 'relative' }}>
@@ -421,14 +374,6 @@ function FieldLabel({ children, extra }) {
       {children}
       {extra && <span style={{ marginLeft: 6, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{extra}</span>}
     </label>
-  )
-}
-
-function StatusBadge({ color, children }) {
-  return (
-    <div style={{ fontSize: 13, color, padding: '7px 12px', background: `${color}12`, borderRadius: 8, border: `1px solid ${color}30` }}>
-      {children}
-    </div>
   )
 }
 
