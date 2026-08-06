@@ -69,6 +69,7 @@ export default function Submit() {
   const [fuzzySuggestions, setFuzzySuggestions] = useState([])
 
   const [bikeSearch, setBikeSearch] = useState('')
+  const [showBikeDropdown, setShowBikeDropdown] = useState(false)
 
   const [maps, setMaps] = useState([])
   const [mapSearch, setMapSearch] = useState('')
@@ -120,6 +121,7 @@ export default function Submit() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return alert('Please enter your name.')
+    if (!form.bikeModel.trim()) return alert('Please select your bike model.')
     if (!form.map.trim()) return alert('Please select or enter a map.')
     if (!form.time) return alert('Please enter a lap time.')
 
@@ -238,22 +240,26 @@ export default function Submit() {
 
         {/* BIKE MODEL */}
         <div style={{ marginBottom: 20, position: 'relative' }}>
-          <FieldLabel extra={T.optional}>{T.bike_model}</FieldLabel>
+          <FieldLabel>{T.bike_model}</FieldLabel>
           <input
             placeholder={T.bike_search_placeholder}
             value={bikeSearch}
+            onFocus={() => setShowBikeDropdown(true)}
+            onBlur={() => setTimeout(() => setShowBikeDropdown(false), 200)}
             onChange={(e) => {
               setBikeSearch(e.target.value)
               setForm(prev => ({ ...prev, bikeModel: e.target.value }))
+              setShowBikeDropdown(true)
             }}
             style={inputStyle}
           />
-          {bikeSearch && filteredBikes.length > 0 && (
+          {showBikeDropdown && bikeSearch && filteredBikes.length > 0 && (
             <DropList maxHeight={200}>
               {filteredBikes.map(bike => (
                 <DropItem key={bike} onClick={() => {
                   setBikeSearch(bike)
                   setForm(prev => ({ ...prev, bikeModel: bike }))
+                  setShowBikeDropdown(false)
                 }}>
                   {bike}
                 </DropItem>
