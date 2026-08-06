@@ -46,6 +46,10 @@ export default function Admin() {
   const [mergeTo, setMergeTo] = useState('')
   const [merging, setMerging] = useState(false)
 
+  // Map images
+  const [maps, setMaps] = useState([])
+  const [uploadingMapId, setUploadingMapId] = useState(null)
+
   useEffect(() => {
     if (sessionStorage.getItem('admin_auth') === '1') {
       setAuthed(true)
@@ -54,14 +58,38 @@ export default function Admin() {
   }, [])
 
   const fetchAll = async () => {
-    const [{ data: results }, { data: riderRows }, { data: tvRows }] = await Promise.all([
+    const [{ data: results }, { data: riderRows }, { data: tvRows }, { data: mapRows }] = await Promise.all([
       supabase.from('results').select('id, map_name, lap_time, bike, youtube_url, approved, created_at, riders(name, id)').order('created_at', { ascending: false }),
       supabase.from('riders').select('id, name').order('name'),
       supabase.from('training_videos').select('*').order('created_at', { ascending: false }),
+      supabase.from('maps').select('id, name, image_url').order('name'),
     ])
     setData(results || [])
     setRiders(riderRows || [])
     setTrainingVideos(tvRows || [])
+    setMaps(mapRows || [])
+  }
+
+  const uploadMapImage = async (map, file) => {
+    setUploadingMapId(map.id)
+    const ext = file.name.split('.').pop()
+    const filename = `${map.name.toLowerCase().replace(/\s+/g, '_')}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('map-images')
+      .upload(filename, file, { upsert: true, contentType: file.type })
+    if (uploadError) {
+      alert('Upload failed: ' + uploadError.message)
+      setUploadingMapId(null)
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('map-images').getPublicUrl(filename)
+    const { error: updateError } = await supabase.from('maps').update({ image_url: publicUrl }).eq('id', map.id)
+    if (updateError) {
+      alert('Failed to save URL: ' + updateError.message)
+    } else {
+      await fetchAll()
+    }
+    setUploadingMapId(null)
   }
 
   useEffect(() => {
@@ -398,36 +426,87 @@ export default function Admin() {
         )}
 
         {/* ── TOOLS TAB ── */}
-        {tab === 'tools' && riders.length >= 2 && (
+        {tab === 'tools' && (
           <>
-            <SectionTitle>Merge duplicate riders</SectionTitle>
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
+            {/* Map images */}
+            <SectionTitle>Map images</SectionTitle>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, marginBottom: 28 }}>
               <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
-                Moves all runs from the duplicate to the correct rider, then deletes the duplicate.
+                Upload a course layout image for each map. Shown on the submit form and maps page.
               </div>
-              <Field label="Duplicate (delete after)">
-                <select value={mergeFrom} onChange={e => setMergeFrom(e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
-                  <option value="">— select rider to remove —</option>
-                  {riders.filter(r => r.id !== mergeTo).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </Field>
-              <Field label="Keep (correct name)">
-                <select value={mergeTo} onChange={e => setMergeTo(e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
-                  <option value="">— select rider to keep —</option>
-                  {riders.filter(r => r.id !== mergeFrom).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </Field>
-              <button onClick={mergeRiders} disabled={!mergeFrom || !mergeTo || mergeFrom === mergeTo || merging} style={{
-                width: '100%', padding: '12px 16px',
-                background: mergeFrom && mergeTo && mergeFrom !== mergeTo ? `${ORANGE}20` : '#ffffff08',
-                border: `1px solid ${mergeFrom && mergeTo ? ORANGE : BORDER}`,
-                borderRadius: 10, color: mergeFrom && mergeTo ? ORANGE : MUTED,
-                fontWeight: 700, fontSize: 14, cursor: mergeFrom && mergeTo ? 'pointer' : 'default',
-                opacity: merging ? 0.5 : 1,
-              }}>
-                {merging ? 'Merging...' : '🔀 Merge riders'}
-              </button>
+              {maps.map(map => (
+                <div key={map.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, padding: '10px 0', borderBottom: `1px solid ${BORDER}` }}>
+                  {/* Thumbnail */}
+                  <div style={{ width: 64, height: 48, borderRadius: 8, overflow: 'hidden', background: '#0a1020', flexShrink: 0, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {map.image_url
+                      ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={map.image_url} alt={map.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )
+                      : <span style={{ fontSize: 20 }}>🗺</span>
+                    }
+                  </div>
+                  {/* Name */}
+                  <div style={{ flex: 1, fontSize: 14, color: TEXT, fontWeight: 600 }}>{map.name}</div>
+                  {/* Upload button */}
+                  <label style={{
+                    padding: '7px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', flexShrink: 0,
+                    background: uploadingMapId === map.id ? '#ffffff08' : `${BLUE}20`,
+                    border: `1px solid ${uploadingMapId === map.id ? BORDER : BLUE}`,
+                    color: uploadingMapId === map.id ? MUTED : BLUE,
+                    fontWeight: 600,
+                  }}>
+                    {uploadingMapId === map.id ? 'Uploading…' : map.image_url ? '↑ Replace' : '↑ Upload'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      disabled={uploadingMapId !== null}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) uploadMapImage(map, file)
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                </div>
+              ))}
+              {maps.length === 0 && <div style={{ fontSize: 13, color: MUTED }}>No maps yet.</div>}
             </div>
+
+            {/* Merge riders */}
+            {riders.length >= 2 && (
+              <>
+                <SectionTitle>Merge duplicate riders</SectionTitle>
+                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
+                  <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
+                    Moves all runs from the duplicate to the correct rider, then deletes the duplicate.
+                  </div>
+                  <Field label="Duplicate (delete after)">
+                    <select value={mergeFrom} onChange={e => setMergeFrom(e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
+                      <option value="">— select rider to remove —</option>
+                      {riders.filter(r => r.id !== mergeTo).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Keep (correct name)">
+                    <select value={mergeTo} onChange={e => setMergeTo(e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
+                      <option value="">— select rider to keep —</option>
+                      {riders.filter(r => r.id !== mergeFrom).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </Field>
+                  <button onClick={mergeRiders} disabled={!mergeFrom || !mergeTo || mergeFrom === mergeTo || merging} style={{
+                    width: '100%', padding: '12px 16px',
+                    background: mergeFrom && mergeTo && mergeFrom !== mergeTo ? `${ORANGE}20` : '#ffffff08',
+                    border: `1px solid ${mergeFrom && mergeTo ? ORANGE : BORDER}`,
+                    borderRadius: 10, color: mergeFrom && mergeTo ? ORANGE : MUTED,
+                    fontWeight: 700, fontSize: 14, cursor: mergeFrom && mergeTo ? 'pointer' : 'default',
+                    opacity: merging ? 0.5 : 1,
+                  }}>
+                    {merging ? 'Merging...' : '🔀 Merge riders'}
+                  </button>
+                </div>
+              </>
+            )}
           </>
         )}
 
