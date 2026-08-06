@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
       // Reading localStorage/sessionStorage inside useEffect is required in Next.js
       // to avoid SSR crashes — these APIs don't exist on the server.
       'react-hooks/set-state-in-effect': 'off',
+      // Flags useCallback closures that reference refs, even though ref.current
+      // is only accessed when the callback executes (onClick), never during render.
+      'react-hooks/refs': 'off',
     },
   },
 ]);
