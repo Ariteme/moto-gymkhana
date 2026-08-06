@@ -1,0 +1,9 @@
+.next
+node_modules
+.git
+venv
+*.pyc
+__pycache__
+.env*
+tests
+scripts
