@@ -17,22 +17,17 @@ function isCyrillic(text) {
   return /[а-яёА-ЯЁ]/.test(text)
 }
 
-async function azureTranslate(texts, targetLang) {
-  const res = await fetch(
-    `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${targetLang}`,
-    {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': process.env.AZURE_TRANSLATOR_KEY,
-        'Ocp-Apim-Subscription-Region': process.env.AZURE_TRANSLATOR_REGION,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(texts.map(text => ({ text }))),
-    }
-  )
-  const data = await res.json()
-  if (!Array.isArray(data)) throw new Error('Azure translation failed: ' + JSON.stringify(data))
-  return data.map(item => item.translations[0].text)
+async function myMemoryTranslate(texts, targetLang) {
+  // MyMemory translates one text at a time — run in parallel
+  const sourceLang = targetLang === 'en' ? 'ru' : 'en'
+  const results = await Promise.all(texts.map(async (text) => {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (data.responseStatus !== 200) throw new Error('MyMemory error: ' + data.responseDetails)
+    return data.responseData.translatedText
+  }))
+  return results
 }
 
 export async function POST(request) {
@@ -73,13 +68,13 @@ export async function POST(request) {
     }
   }
 
-  // Translate uncached texts via Azure
+  // Translate uncached texts via MyMemory
   if (toTranslate.length > 0) {
     let translated
     try {
-      translated = await azureTranslate(toTranslate, targetLang)
+      translated = await myMemoryTranslate(toTranslate, targetLang)
     } catch (err) {
-      console.error('[translate] Azure failed:', err.message)
+      console.error('[translate] MyMemory failed:', err.message)
       return NextResponse.json({ translations: results.map((r, i) => r ?? texts[i]) })
     }
 
