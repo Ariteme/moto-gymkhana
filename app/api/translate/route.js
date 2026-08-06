@@ -18,15 +18,25 @@ function isCyrillic(text) {
 }
 
 async function myMemoryTranslate(texts, targetLang) {
-  // MyMemory translates one text at a time — run in parallel
   const sourceLang = targetLang === 'en' ? 'ru' : 'en'
-  const results = await Promise.all(texts.map(async (text) => {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
-    const res = await fetch(url)
-    const data = await res.json()
-    if (data.responseStatus !== 200) throw new Error('MyMemory error: ' + data.responseDetails)
-    return data.responseData.translatedText
-  }))
+  // Translate one at a time — if a single text fails, return original rather than crashing the batch
+  const results = []
+  for (const text of texts) {
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}&de=antonjerusalemsky@gmail.com`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
+        console.error('[translate] MyMemory rejected text:', data.responseDetails || data.responseStatus)
+        results.push(text)
+      } else {
+        results.push(data.responseData.translatedText)
+      }
+    } catch (err) {
+      console.error('[translate] MyMemory fetch error:', err.message)
+      results.push(text)
+    }
+  }
   return results
 }
 
@@ -70,13 +80,7 @@ export async function POST(request) {
 
   // Translate uncached texts via MyMemory
   if (toTranslate.length > 0) {
-    let translated
-    try {
-      translated = await myMemoryTranslate(toTranslate, targetLang)
-    } catch (err) {
-      console.error('[translate] MyMemory failed:', err.message)
-      return NextResponse.json({ translations: results.map((r, i) => r ?? texts[i]) })
-    }
+    const translated = await myMemoryTranslate(toTranslate, targetLang)
 
     const inserts = []
     for (let j = 0; j < toTranslate.length; j++) {
