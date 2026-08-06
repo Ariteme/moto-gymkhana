@@ -4,9 +4,11 @@ Smoke tests — check that the live deployed app responds correctly.
 'Smoke test' = power it on, does it smoke? Basic health check.
 Same concept as pinging your lab nodes before running deeper validation.
 """
+import os
 import pytest
 import requests
-from conftest import APP_URL
+
+APP_URL = os.getenv('APP_URL', 'https://moto-gymkhana.vercel.app')
 
 
 def get_page(path, timeout=15):
