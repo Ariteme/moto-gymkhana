@@ -72,20 +72,15 @@ export default function Admin() {
 
   const uploadMapImage = async (map, file) => {
     setUploadingMapId(map.id)
-    const ext = file.name.split('.').pop()
-    const filename = `${map.name.toLowerCase().replace(/\s+/g, '_')}.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('map-images')
-      .upload(filename, file, { upsert: true, contentType: file.type })
-    if (uploadError) {
-      alert('Upload failed: ' + uploadError.message)
-      setUploadingMapId(null)
-      return
-    }
-    const { data: { publicUrl } } = supabase.storage.from('map-images').getPublicUrl(filename)
-    const { error: updateError } = await supabase.from('maps').update({ image_url: publicUrl }).eq('id', map.id)
-    if (updateError) {
-      alert('Failed to save URL: ' + updateError.message)
+    const formData = new FormData()
+    formData.append('password', adminPassword)
+    formData.append('mapId', map.id)
+    formData.append('mapName', map.name)
+    formData.append('file', file)
+    const res = await fetch('/api/admin-map-upload', { method: 'POST', body: formData })
+    const json = await res.json()
+    if (!res.ok) {
+      alert('Upload failed: ' + json.error)
     } else {
       await fetchAll()
     }
