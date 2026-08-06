@@ -347,7 +347,7 @@ export default function Submit() {
               ))}
               {form.map && !mapNames.includes(form.map.trim()) && form.map.trim() && (
                 <DropItem color={GREEN} onClick={() => setShowMapDropdown(false)}>
-                  {T.add_new_map} "{form.map}"
+                  {T.add_new_map} &quot;{form.map}&quot;
                 </DropItem>
               )}
             </DropList>
