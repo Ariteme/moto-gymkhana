@@ -75,7 +75,13 @@ export async function POST(request) {
 
   // Translate uncached texts via Azure
   if (toTranslate.length > 0) {
-    const translated = await azureTranslate(toTranslate, targetLang)
+    let translated
+    try {
+      translated = await azureTranslate(toTranslate, targetLang)
+    } catch (err) {
+      console.error('[translate] Azure failed:', err.message)
+      return NextResponse.json({ translations: results.map((r, i) => r ?? texts[i]) })
+    }
 
     const inserts = []
     for (let j = 0; j < toTranslate.length; j++) {
