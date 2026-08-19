@@ -114,6 +114,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   const [cinemaMode,  setCinemaMode]  = useState(false)
   const [isLandscape, setIsLandscape] = useState(true)
   const [isWide,      setIsWide]      = useState(false)
+  const [isPlaying,   setIsPlaying]   = useState(false)
 
   // Active runs (may change when user switches map)
   const [activeRun1, setActiveRun1] = useState(runs[0])
@@ -193,6 +194,7 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
     setActiveRun2(riderMaps.r2[mapName])
     seeked.current = false
     setCinemaMode(false)
+    setIsPlaying(false)
     setRawT1('0')
     setRawT2('0')
     setLiveT1(null)
@@ -232,24 +234,27 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
   }, [vid1, vid2])   // re-subscribe when videos change (map switch)
 
   // ── Playback controls ──────────────────────────────────────────────────────
-  const playBoth = useCallback(() => {
-    if (!seeked.current) {
-      ytCmd(ref1, 'seekTo', [t1, true]); ytCmd(ref2, 'seekTo', [t2, true])
-      seeked.current = true
-      setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      ytCmd(ref1, 'pauseVideo'); ytCmd(ref2, 'pauseVideo')
+      setIsPlaying(false)
     } else {
-      ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo')
+      if (!seeked.current) {
+        ytCmd(ref1, 'seekTo', [t1, true]); ytCmd(ref2, 'seekTo', [t2, true])
+        seeked.current = true
+        setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
+      } else {
+        ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo')
+      }
+      setIsPlaying(true)
     }
-  }, [t1, t2])
-
-  const pauseBoth = useCallback(() => {
-    ytCmd(ref1, 'pauseVideo'); ytCmd(ref2, 'pauseVideo')
-  }, [])
+  }, [isPlaying, t1, t2])
 
   const restartBoth = useCallback(() => {
     seeked.current = true
     ytCmd(ref1, 'seekTo', [t1, true]); ytCmd(ref2, 'seekTo', [t2, true])
     setTimeout(() => { ytCmd(ref1, 'playVideo'); ytCmd(ref2, 'playVideo') }, 150)
+    setIsPlaying(true)
   }, [t1, t2])
 
   const handleShare = useCallback(async () => {
@@ -332,42 +337,15 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
         {/* Videos */}
         {bothHaveVideo && (
           <>
-            {/* Sync controls + cinema toggle + share */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-              {[
-                { label: '⏮ Restart', fn: restartBoth },
-                { label: '▶ Play',    fn: playBoth    },
-                { label: '⏸ Pause',   fn: pauseBoth   },
-              ].map(({ label, fn }) => (
-                <button key={label} onClick={fn} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 14px', color: TEXT, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                  {label}
-                </button>
-              ))}
-              <div style={{ width: 1, height: 28, background: BORDER }} />
-              <button
-                onClick={() => setCinemaMode(v => !v)}
-                title={cinemaMode ? 'Show stats' : 'Hide stats / expand videos'}
-                style={{ background: cinemaMode ? BLUE + '22' : CARD, border: `1px solid ${cinemaMode ? BLUE + '66' : BORDER}`, borderRadius: 8, padding: '8px 12px', color: cinemaMode ? BLUE : MUTED, cursor: 'pointer', fontSize: 13 }}
-              >
-                {cinemaMode ? '▼' : '▲'}
-              </button>
-              <div style={{ width: 1, height: 28, background: BORDER }} />
-              <button
-                onClick={handleShare}
-                style={{ background: CARD, border: `1px solid ${copied ? GREEN + '66' : BORDER}`, borderRadius: 8, padding: '8px 14px', color: copied ? GREEN : MUTED, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'color 0.2s, border-color 0.2s' }}
-              >
-                {copied ? '✓ Copied!' : '🔗 Share'}
-              </button>
-            </div>
-
             {!isLandscape && (
               <div style={{ textAlign: 'center', padding: '7px 12px', background: GOLD + '18', border: `1px solid ${GOLD}33`, borderRadius: 8, marginBottom: 10, fontSize: 12, color: GOLD }}>
                 🔄 Rotate your phone for a better view
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: isWide ? 16 : 6 }}>
-              {videoEntries.map(({ ref, vid, run, rawT, setRawT, live }) => (
+            {/* Videos */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isWide ? 16 : 6, marginBottom: 14 }}>
+              {videoEntries.map(({ ref, vid, run }) => (
                 <div key={run.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                     {run.riders?.name} · {Number(run.lap_time).toFixed(2)}s
@@ -385,31 +363,63 @@ export default function CompareModal({ runs, onClose, initialT1 = 0, initialT2 =
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                   />
-                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11, color: MUTED }}>Start at</span>
-                    <input
-                      type="text" inputMode="numeric" pattern="[0-9]*"
-                      value={rawT}
-                      onChange={e => { seeked.current = false; setRawT(e.target.value.replace(/[^0-9]/g, '')) }}
-                      style={inputStyle}
-                    />
-                    <span style={{ fontSize: 11, color: MUTED }}>s</span>
-                    {live !== null && (
-                      <button
-                        onClick={() => { seeked.current = false; setRawT(String(live)) }}
-                        title="Capture current video time"
-                        style={{ background: BLUE + '22', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 7px', color: BLUE, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
-                      >
-                        📍 {live}s
-                      </button>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ marginTop: 10, textAlign: 'center', fontSize: 11, color: MUTED }}>
-              Play each video, pause where you want the sync to start, tap 📍 to save that moment — then ⏮ Restart plays both together from those points.
+            {/* Controls */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+              <button onClick={restartBoth} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 14px', color: TEXT, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                ⏮ Restart
+              </button>
+              <button onClick={togglePlay} style={{ background: isPlaying ? GREEN + '22' : CARD, border: `1px solid ${isPlaying ? GREEN + '66' : BORDER}`, borderRadius: 8, padding: '8px 18px', color: isPlaying ? GREEN : TEXT, cursor: 'pointer', fontSize: 13, fontWeight: 700, minWidth: 90 }}>
+                {isPlaying ? '⏸ Pause' : '▶ Play'}
+              </button>
+              <div style={{ width: 1, height: 28, background: BORDER }} />
+              <button
+                onClick={() => setCinemaMode(v => !v)}
+                title={cinemaMode ? 'Show stats' : 'Hide stats / expand videos'}
+                style={{ background: cinemaMode ? BLUE + '22' : CARD, border: `1px solid ${cinemaMode ? BLUE + '66' : BORDER}`, borderRadius: 8, padding: '8px 12px', color: cinemaMode ? BLUE : MUTED, cursor: 'pointer', fontSize: 13 }}
+              >
+                {cinemaMode ? '▼' : '▲'}
+              </button>
+              <div style={{ width: 1, height: 28, background: BORDER }} />
+              <button
+                onClick={handleShare}
+                style={{ background: CARD, border: `1px solid ${copied ? GREEN + '66' : BORDER}`, borderRadius: 8, padding: '8px 14px', color: copied ? GREEN : MUTED, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'color 0.2s, border-color 0.2s' }}
+              >
+                {copied ? '✓ Copied!' : '🔗 Share'}
+              </button>
+            </div>
+
+            {/* Start points */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 10, flexWrap: 'wrap' }}>
+              {videoEntries.map(({ run, rawT, setRawT, live }) => (
+                <div key={run.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>{run.riders?.name}</span>
+                  <span style={{ fontSize: 11, color: MUTED }}>start</span>
+                  <input
+                    type="text" inputMode="numeric" pattern="[0-9]*"
+                    value={rawT}
+                    onChange={e => { seeked.current = false; setIsPlaying(false); setRawT(e.target.value.replace(/[^0-9]/g, '')) }}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: 11, color: MUTED }}>s</span>
+                  {live !== null && (
+                    <button
+                      onClick={() => { seeked.current = false; setIsPlaying(false); setRawT(String(live)) }}
+                      title="Capture current video time"
+                      style={{ background: BLUE + '22', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 7px', color: BLUE, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                    >
+                      📍 {live}s
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: 11, color: MUTED }}>
+              Play each video, pause where you want the sync to start, tap 📍 to save that moment — then ⏮ Restart plays both from those points.
             </div>
           </>
         )}
