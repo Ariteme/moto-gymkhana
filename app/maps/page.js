@@ -51,8 +51,8 @@ export default function MapsPage() {
       supabase.from('maps').select('name, image_url').order('name'),
       supabase.from('results').select('map_name, lap_time, riders(name, number)').eq('approved', true),
     ]).then(([mapsRes, runsRes]) => {
-      const dbMaps = mapsRes.data || []
-      const runs = runsRes.data || []
+      const dbMaps = (mapsRes.data || []).filter(m => !/^Gymfun OLC/i.test(m.name))
+      const runs = (runsRes.data || []).filter(r => !/^Gymfun OLC/i.test(r.map_name))
 
       const stats = {}
       for (const r of runs) {
@@ -161,7 +161,10 @@ function OlcCard({ round, results, lang }) {
               <div key={r.olcRiderId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                 <span style={{ fontSize: 11, color: MUTED, width: 44, flexShrink: 0 }}>#{r.rank}/{total}</span>
                 <span style={{ flex: 1, fontSize: 13, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                <span style={{ color: GOLD, fontWeight: 700, fontSize: 13 }}>{r.finalTimeStr}</span>
+                {r.youtubeUrl && (
+                  <a href={r.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, fontSize: 15, flexShrink: 0 }}>▶</a>
+                )}
+                <span style={{ color: GOLD, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{r.finalTimeStr}</span>
               </div>
             ))}
             {il.length > 3 && (

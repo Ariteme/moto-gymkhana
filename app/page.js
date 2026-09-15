@@ -106,11 +106,12 @@ export default function Home() {
     }
   }, [mapFilter])
 
-  const maps = [...new Set(data.map(r => r.map_name))].filter(Boolean).sort()
-  const bikes = [...new Set(data.map(r => r.bike))].filter(Boolean).sort()
-  const riders = [...new Set(data.map(r => r.riders?.name))].filter(Boolean).sort()
+  const localData = data.filter(r => !/^Gymfun OLC/i.test(r.map_name))
+  const maps = [...new Set(localData.map(r => r.map_name))].filter(Boolean).sort()
+  const bikes = [...new Set(localData.map(r => r.bike))].filter(Boolean).sort()
+  const riders = [...new Set(localData.map(r => r.riders?.name))].filter(Boolean).sort()
 
-  const filteredData = data
+  const filteredData = localData
     .filter(r => !mapFilter || r.map_name === mapFilter)
     .filter(r => !bikeFilter || r.bike === bikeFilter)
     .filter(r => !riderFilter || r.riders?.name === riderFilter)

@@ -104,6 +104,8 @@ async function fetchIlResults(id) {
       !c.includes('%') && !/^\d{4}-/.test(c) && c.length > 2
     ) || ''
 
+    const ytMatch = row.match(/href=["'](https?:\/\/(?:youtu\.be|(?:www\.)?youtube\.com)[^"'\s]+)["']/)
+
     ilRiders.push({
       rank: isNaN(rankNum) ? totalRiders : rankNum,
       olcRiderId: parseInt(riderIdMatch[1], 10),
@@ -113,6 +115,7 @@ async function fetchIlResults(id) {
       finalTimeStr: times.at(-1) || null,
       finalTime: times.length ? parseOlcTime(times.at(-1)) : null,
       pct: pctMatch ? parseFloat(pctMatch[1]) : null,
+      youtubeUrl: ytMatch?.[1] || null,
     })
   }
 

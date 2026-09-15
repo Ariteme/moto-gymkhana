@@ -64,8 +64,12 @@ function RiderRow({ rider, totalRiders }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {rider.pct && <ClassBadge pct={rider.pct} />}
+          {rider.youtubeUrl && (
+            <a href={rider.youtubeUrl} target="_blank" rel="noopener noreferrer"
+              style={{ color: MUTED, fontSize: 15, lineHeight: 1 }}>▶</a>
+          )}
           <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{rider.finalTimeStr}</span>
         </div>
         {rider.pct && (
