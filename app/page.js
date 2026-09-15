@@ -233,7 +233,7 @@ export default function Home() {
 
         {/* OLC OR LOCAL SECTIONS */}
         {mapFilter === '__OLC__' ? (
-          <OlcSection lang={lang} onVideoClick={setModalVideo} />
+          <OlcSection lang={lang} />
         ) : (<>
 
         {/* PER-MAP SECTIONS */}
@@ -549,7 +549,36 @@ function OlcClassBadge({ pct }) {
   )
 }
 
-function OlcRiderList({ results, loading, lang, onVideoClick }) {
+function YtPlayBtn({ onClick }) {
+  return (
+    <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', lineHeight: 1 }}>
+      <svg width="34" height="24" viewBox="0 0 34 24" xmlns="http://www.w3.org/2000/svg">
+        <rect width="34" height="24" rx="6" fill="#FF0000" />
+        <path d="M14 8L23 12L14 16V8Z" fill="white" />
+      </svg>
+    </button>
+  )
+}
+
+function VideoCompareModal({ videoIds, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '10px 10px 14px' }}>
+      <button onClick={onClose} style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', marginBottom: 8, lineHeight: 1, padding: '2px 6px' }}>✕</button>
+      <div style={{ display: 'flex', gap: 8, flex: 1, minHeight: 0 }}>
+        {videoIds.map((id, i) => (
+          <div key={id} style={{ flex: 1, borderRadius: 8, overflow: 'hidden', minWidth: 0 }}>
+            <iframe width="100%" height="100%"
+              src={`https://www.youtube.com/embed/${id}?autoplay=${i === 0 ? 1 : 0}`}
+              allow="autoplay; encrypted-media; fullscreen" allowFullScreen
+              style={{ border: 'none', display: 'block' }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OlcRiderList({ results, loading, lang, onPlay, onCompare, compareVideos }) {
   if (loading) return <div style={{ color: MUTED, fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Loading…</div>
   if (!results) return null
   const { ilRiders, totalRiders } = results
@@ -564,44 +593,52 @@ function OlcRiderList({ results, loading, lang, onVideoClick }) {
         🇮🇱 Israel — {ilRiders.length} {lang === 'ru' ? 'из' : 'of'} {totalRiders} {lang === 'ru' ? 'глобально' : 'globally'}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {ilRiders.map(r => (
-          <div key={r.olcRiderId} style={{
-            background: SURFACE, borderRadius: 10, padding: '10px 12px',
-            border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-              background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        {ilRiders.map(r => {
+          const vid = ytId(r.youtubeUrl)
+          const isComparing = vid && compareVideos?.includes(vid)
+          return (
+            <div key={r.olcRiderId} style={{
+              background: SURFACE, borderRadius: 10, padding: '10px 12px',
+              border: `1px solid ${isComparing ? BLUE : BORDER}`, display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{r.rank}</span>
-              <span style={{ fontSize: 9, color: MUTED, lineHeight: 1 }}>/{totalRiders}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {[r.bike, r.city].filter(Boolean).join(' · ')}
+              <div style={{
+                width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+                background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{r.rank}</span>
+                <span style={{ fontSize: 9, color: MUTED, lineHeight: 1 }}>/{totalRiders}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {[r.bike, r.city].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {r.pct && <OlcClassBadge pct={r.pct} />}
+                  {vid && <YtPlayBtn onClick={() => onPlay(vid)} />}
+                  {vid && onCompare && (
+                    <button onClick={() => onCompare(vid)} style={{
+                      background: isComparing ? BLUE : 'none', border: `1px solid ${isComparing ? BLUE : BORDER}`,
+                      borderRadius: 7, padding: '4px 8px', cursor: 'pointer',
+                      color: isComparing ? '#fff' : MUTED, fontSize: 12,
+                    }}>⚖</button>
+                  )}
+                  <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{r.finalTimeStr}</span>
+                </div>
+                {r.pct && <span style={{ fontSize: 11, color: MUTED }}>{r.pct.toFixed(2)}% of leader</span>}
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {r.pct && <OlcClassBadge pct={r.pct} />}
-                {r.youtubeUrl && onVideoClick && (
-                  <button onClick={() => { const id = ytId(r.youtubeUrl); if (id) onVideoClick(id) }}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: YT_RED, fontSize: 16, lineHeight: 1 }}>▶</button>
-                )}
-                <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{r.finalTimeStr}</span>
-              </div>
-              {r.pct && <span style={{ fontSize: 11, color: MUTED }}>{r.pct.toFixed(2)}% of leader</span>}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-function OlcSection({ lang, onVideoClick }) {
+function OlcSection({ lang }) {
   const [rounds, setRounds] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingPast, setLoadingPast] = useState(true)
@@ -609,6 +646,16 @@ function OlcSection({ lang, onVideoClick }) {
   const [loadingResults, setLoadingResults] = useState({})
   const [expanded, setExpanded] = useState({})
   const [showAllPast, setShowAllPast] = useState(false)
+  const [modalVideo, setModalVideo] = useState(null)
+  const [compareVideos, setCompareVideos] = useState([])
+
+  function toggleCompare(vid) {
+    setCompareVideos(prev => {
+      if (prev.includes(vid)) return prev.filter(v => v !== vid)
+      if (prev.length >= 2) return [prev[1], vid]
+      return [...prev, vid]
+    })
+  }
 
   function loadResults(id, currentMap) {
     if (currentMap[id] || loadingResults[id]) return
@@ -675,7 +722,7 @@ function OlcSection({ lang, onVideoClick }) {
             <div style={{ fontSize: 12, color: MUTED, marginBottom: 16 }}>
               {fmtDate(current.startDate)} – {fmtDate(current.endDate)}
             </div>
-            <OlcRiderList results={resultsMap[current.id]} loading={!!loadingResults[current.id]} lang={lang} onVideoClick={onVideoClick} />
+            <OlcRiderList results={resultsMap[current.id]} loading={!!loadingResults[current.id]} lang={lang} onPlay={setModalVideo} onCompare={toggleCompare} compareVideos={compareVideos} />
           </div>
         </div>
       )}
@@ -708,7 +755,7 @@ function OlcSection({ lang, onVideoClick }) {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {round.mapUrl && <img src={round.mapUrl} alt={round.name} style={{ width: '100%', display: 'block' }} />}
                       <div style={{ padding: '12px 14px 16px' }}>
-                        <OlcRiderList results={res} loading={!!loadingResults[round.id]} lang={lang} onVideoClick={onVideoClick} />
+                        <OlcRiderList results={res} loading={!!loadingResults[round.id]} lang={lang} onPlay={setModalVideo} onCompare={toggleCompare} compareVideos={compareVideos} />
                       </div>
                     </div>
                   )}
@@ -734,6 +781,25 @@ function OlcSection({ lang, onVideoClick }) {
         <a href="https://mgym.fun/online/Competitions.php" target="_blank" rel="noopener noreferrer" style={{ color: MUTED }}>mgym.fun</a>
         {' · '}updated hourly
       </div>
+
+      {compareVideos.length === 1 && (
+        <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: BLUE, color: '#fff', borderRadius: 24, padding: '10px 20px', fontSize: 13, fontWeight: 600, zIndex: 500, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+          ⚖ {lang === 'ru' ? 'Выберите 2-е видео' : 'Select a 2nd video'}
+          <button onClick={() => setCompareVideos([])} style={{ marginLeft: 12, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, opacity: 0.7 }}>✕</button>
+        </div>
+      )}
+
+      {compareVideos.length === 2 && (
+        <VideoCompareModal videoIds={compareVideos} onClose={() => setCompareVideos([])} />
+      )}
+
+      {modalVideo && (
+        <div onClick={() => setModalVideo(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 900, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}>
+            <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${modalVideo}?autoplay=1`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{ border: 'none', display: 'block' }} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -16,14 +16,23 @@ const BLUE = '#1a5cff'
 const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const GOLD = '#ffc947'
-const YT_RED = '#ff0000'
-
 function ytId(url) {
   if (!url) return null
   if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
   if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
   if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
   return null
+}
+
+function YtPlayBtn({ onClick }) {
+  return (
+    <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', lineHeight: 1 }}>
+      <svg width="30" height="21" viewBox="0 0 34 24" xmlns="http://www.w3.org/2000/svg">
+        <rect width="34" height="24" rx="6" fill="#FF0000" />
+        <path d="M14 8L23 12L14 16V8Z" fill="white" />
+      </svg>
+    </button>
+  )
 }
 
 function fmtDate(str) {
@@ -182,8 +191,7 @@ function OlcCard({ round, results, lang, onVideoClick }) {
                 <span style={{ fontSize: 11, color: MUTED, width: 44, flexShrink: 0 }}>#{r.rank}/{total}</span>
                 <span style={{ flex: 1, fontSize: 13, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
                 {r.youtubeUrl && (
-                  <button onClick={() => { const id = ytId(r.youtubeUrl); if (id) onVideoClick(id) }}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: YT_RED, fontSize: 16, lineHeight: 1, flexShrink: 0 }}>▶</button>
+                  <YtPlayBtn onClick={() => { const id = ytId(r.youtubeUrl); if (id) onVideoClick(id) }} />
                 )}
                 <span style={{ color: GOLD, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{r.finalTimeStr}</span>
               </div>
@@ -194,7 +202,7 @@ function OlcCard({ round, results, lang, onVideoClick }) {
           </div>
         )}
 
-        <Link href="/olc" style={{
+        <Link href="/?map=__OLC__" style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '8px 16px', borderRadius: 8,
           background: 'rgba(26,92,255,0.08)', border: `1px solid ${BLUE}50`,
