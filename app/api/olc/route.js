@@ -112,8 +112,8 @@ async function fetchIlResults(id) {
       name,
       city: cityMatch?.[1]?.trim() || null,
       bike: bike.slice(0, 50),
-      finalTimeStr: times.at(-1) || null,
-      finalTime: times.length ? parseOlcTime(times.at(-1)) : null,
+      finalTimeStr: times[0] || null,
+      finalTime: times.length ? parseOlcTime(times[0]) : null,
       pct: pctMatch ? parseFloat(pctMatch[1]) : null,
       youtubeUrl: ytMatch?.[1] || null,
     })
