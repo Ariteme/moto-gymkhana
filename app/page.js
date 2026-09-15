@@ -37,6 +37,10 @@ export default function Home() {
   const [copiedId, setCopiedId] = useState(null)
   const [compareRuns, setCompareRuns] = useState([])
   const [worldRecords, setWorldRecords] = useState({})
+  const [olcRound, setOlcRound] = useState(null)
+  const [olcResults, setOlcResults] = useState(null)
+  const [olcLoading, setOlcLoading] = useState(false)
+  const [olcFetched, setOlcFetched] = useState(false)
 
   function toggleCompare(run) {
     setCompareRuns(prev => {
@@ -100,11 +104,27 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (mapFilter) {
+    if (mapFilter && mapFilter !== '__OLC__') {
       setExpandedMaps(prev => ({ ...prev, [mapFilter]: true }))
       setExpandedPodiums(prev => ({ ...prev, [mapFilter]: true }))
     }
-  }, [mapFilter])
+    if (mapFilter !== '__OLC__' || olcFetched || olcLoading) return
+    setOlcLoading(true)
+    async function load() {
+      try {
+        const { rounds = [] } = await fetch('/api/olc?action=rounds').then(r => r.json())
+        const cur = rounds.find(r => r.isCurrent) ?? rounds[0] ?? null
+        setOlcRound(cur)
+        if (cur) {
+          const data = await fetch(`/api/olc?action=results&id=${cur.id}`).then(r => r.json())
+          setOlcResults(data)
+        }
+      } catch { /* ignore */ }
+      setOlcLoading(false)
+      setOlcFetched(true)
+    }
+    load()
+  }, [mapFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const localData = data.filter(r => !/^Gymfun OLC/i.test(r.map_name))
   const maps = [...new Set(localData.map(r => r.map_name))].filter(Boolean).sort()
@@ -196,6 +216,7 @@ export default function Home() {
               label={T.all_maps}
               value={mapFilter}
               options={maps}
+              extraOptions={[{ value: '__OLC__', label: '🌍 OLC' }]}
               open={openDropdown === 'map'}
               onToggle={() => setOpenDropdown(openDropdown === 'map' ? null : 'map')}
               onSelect={v => { setMapFilter(v); setOpenDropdown(null) }}
@@ -228,6 +249,11 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* OLC OR LOCAL SECTIONS */}
+        {mapFilter === '__OLC__' ? (
+          <OlcSection round={olcRound} results={olcResults} loading={olcLoading} lang={lang} />
+        ) : (<>
 
         {/* PER-MAP SECTIONS */}
         {podiumMaps.map(mapName => {
@@ -389,6 +415,8 @@ export default function Home() {
           )}
         </div>
 
+        </>)}
+
         {/* FOOTER */}
         <footer style={{ borderTop: `1px solid ${BORDER}`, background: SURFACE, padding: '24px 16px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{T.training_sessions}</div>
@@ -470,8 +498,9 @@ function ToggleBtn({ active, onClick, children }) {
   )
 }
 
-function FilterDropdown({ icon, label, value, options, open, onToggle, onSelect, onClear }) {
-  const display = value ? (value.length > 15 ? value.slice(0, 13) + '…' : value) : label
+function FilterDropdown({ icon, label, value, options, extraOptions = [], open, onToggle, onSelect, onClear }) {
+  const extraOpt = extraOptions.find(o => o.value === value)
+  const display = extraOpt ? extraOpt.label : value ? (value.length > 15 ? value.slice(0, 13) + '…' : value) : label
   return (
     <div style={{ position: 'relative', zIndex: open ? 200 : 'auto' }}>
       <button onClick={onToggle} style={{
@@ -499,6 +528,16 @@ function FilterDropdown({ icon, label, value, options, open, onToggle, onSelect,
           }}>
             {label}
           </button>
+          {extraOptions.map(opt => (
+            <button key={opt.value} onClick={() => onSelect(opt.value)} style={{
+              display: 'flex', width: '100%', textAlign: 'left', padding: '10px 14px',
+              background: value === opt.value ? 'rgba(0,255,153,0.08)' : 'none',
+              border: 'none', borderBottom: `1px solid ${BORDER}`,
+              color: value === opt.value ? GREEN : TEXT, cursor: 'pointer', fontSize: 13,
+            }}>
+              {opt.label}
+            </button>
+          ))}
           {options.map(opt => (
             <button key={opt} onClick={() => onSelect(opt)} style={{
               display: 'flex', width: '100%', textAlign: 'left', padding: '10px 14px',
@@ -511,6 +550,105 @@ function FilterDropdown({ icon, label, value, options, open, onToggle, onSelect,
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function OlcClassBadge({ pct }) {
+  const cls = calcClass(pct, 100)
+  if (!cls) return null
+  const c = CLASS_COLORS[cls]
+  return (
+    <span style={{
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+      borderRadius: 5, padding: '1px 5px', fontSize: 10, fontWeight: 800, letterSpacing: 0.5,
+    }}>
+      {cls}
+    </span>
+  )
+}
+
+function OlcSection({ round, results, loading, lang }) {
+  if (loading) {
+    return <div style={{ padding: '64px 20px', textAlign: 'center', color: MUTED }}>Loading OLC…</div>
+  }
+  if (!round) {
+    return <div style={{ padding: '64px 20px', textAlign: 'center', color: MUTED }}>No OLC round found</div>
+  }
+  const il = results?.ilRiders ?? []
+  const total = results?.totalRiders ?? 0
+  const fmtDate = str => new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  return (
+    <div style={{ padding: '16px 14px 32px' }}>
+      {round.mapUrl && (
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 14 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={round.mapUrl} alt={round.name} style={{ width: '100%', display: 'block' }} />
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: TEXT, flex: 1 }}>{round.name}</div>
+        {round.isCurrent && (
+          <span style={{ background: 'rgba(0,255,153,0.15)', color: GREEN, border: `1px solid ${GREEN}40`, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>LIVE</span>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, marginBottom: 16 }}>
+        {fmtDate(round.startDate)} – {fmtDate(round.endDate)}
+      </div>
+
+      {results === null ? (
+        <div style={{ color: MUTED, fontSize: 13, padding: '12px 0' }}>Loading results…</div>
+      ) : il.length === 0 ? (
+        <div style={{ color: MUTED, fontSize: 13, padding: '12px 0' }}>
+          {lang === 'ru' ? 'Израильских гонщиков пока нет' : 'No Israeli riders yet'}
+        </div>
+      ) : (
+        <>
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>
+            🇮🇱 Israel — {il.length} {lang === 'ru' ? 'из' : 'of'} {total} {lang === 'ru' ? 'глобально' : 'globally'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+            {il.map(r => (
+              <div key={r.olcRiderId} style={{
+                background: CARD, borderRadius: 10, padding: '10px 12px',
+                border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 7, flexShrink: 0,
+                  background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{r.rank}</span>
+                  <span style={{ fontSize: 8, color: MUTED, lineHeight: 1 }}>/{total}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontSize: 11, color: MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {[r.bike, r.city].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {r.pct && <OlcClassBadge pct={r.pct} />}
+                  {r.youtubeUrl && (
+                    <a href={r.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, fontSize: 15, lineHeight: 1 }}>▶</a>
+                  )}
+                  <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{r.finalTimeStr}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Link href="/olc" style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '8px 16px', borderRadius: 8,
+        background: 'rgba(26,92,255,0.08)', border: `1px solid ${BLUE}50`,
+        color: BLUE, fontSize: 13, fontWeight: 600, textDecoration: 'none',
+      }}>
+        {lang === 'ru' ? 'Все результаты OLC →' : 'Full OLC standings →'}
+      </Link>
     </div>
   )
 }
