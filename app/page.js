@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -560,19 +560,133 @@ function YtPlayBtn({ onClick }) {
   )
 }
 
-function VideoCompareModal({ videoIds, onClose }) {
+function VideoCompareModal({ entries, onClose }) {
+  // entries: [{id, name, timeStr}]
+  const ref1 = useRef(null)
+  const ref2 = useRef(null)
+  const refs = [ref1, ref2]
+
+  const [rawT, setRawT] = useState(['0', '0'])
+  const [liveT, setLiveT] = useState([null, null])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const seeked = useRef(false)
+  const playerIdMap = useRef({})
+  const seenIds = useRef([])
+
+  const ts = rawT.map(v => Math.max(0, parseInt(v, 10) || 0))
+
+  function cmd(ref, func, args = []) {
+    ref.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func, args }),
+      'https://www.youtube.com'
+    )
+  }
+
+  useEffect(() => {
+    screen.orientation?.lock?.('landscape').catch(() => {})
+    document.body.style.overflow = 'hidden'
+    return () => { screen.orientation?.unlock?.(); document.body.style.overflow = '' }
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refs.forEach(r => r.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: 'listening' }), 'https://www.youtube.com'
+      ))
+    }, 2500)
+    const handler = (e) => {
+      if (e.origin !== 'https://www.youtube.com') return
+      let data; try { data = JSON.parse(e.data) } catch { return }
+      const msgId = data.id
+      if (msgId === undefined) return
+      if (!playerIdMap.current[msgId]) {
+        seenIds.current.push(msgId)
+        playerIdMap.current[msgId] = seenIds.current.length === 1 ? 0 : 1
+      }
+      if (data.event === 'infoDelivery' && data.info?.currentTime !== undefined) {
+        const secs = Math.floor(data.info.currentTime)
+        const idx = playerIdMap.current[msgId]
+        setLiveT(prev => { const n = [...prev]; if (n[idx] !== secs) n[idx] = secs; return n })
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => { clearTimeout(timer); window.removeEventListener('message', handler) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      refs.forEach(r => cmd(r, 'pauseVideo'))
+      setIsPlaying(false)
+    } else {
+      if (!seeked.current) {
+        refs.forEach((r, i) => cmd(r, 'seekTo', [ts[i], true]))
+        seeked.current = true
+        setTimeout(() => refs.forEach(r => cmd(r, 'playVideo')), 150)
+      } else {
+        refs.forEach(r => cmd(r, 'playVideo'))
+      }
+      setIsPlaying(true)
+    }
+  }, [isPlaying, ts[0], ts[1]]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const restartBoth = useCallback(() => {
+    seeked.current = true
+    refs.forEach((r, i) => cmd(r, 'seekTo', [ts[i], true]))
+    setTimeout(() => refs.forEach(r => cmd(r, 'playVideo')), 150)
+    setIsPlaying(true)
+  }, [ts[0], ts[1]]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const inputStyle = { width: 52, background: '#07090f', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '4px 6px', color: TEXT, fontSize: 13, textAlign: 'center' }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '10px 10px 14px' }}>
-      <button onClick={onClose} style={{ alignSelf: 'flex-end', background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', marginBottom: 8, lineHeight: 1, padding: '2px 6px' }}>✕</button>
-      <div style={{ display: 'flex', gap: 8, flex: 1, minHeight: 0 }}>
-        {videoIds.map((id, i) => (
-          <div key={id} style={{ flex: 1, borderRadius: 8, overflow: 'hidden', minWidth: 0 }}>
-            <iframe width="100%" height="100%"
-              src={`https://www.youtube.com/embed/${id}?autoplay=${i === 0 ? 1 : 0}`}
-              allow="autoplay; encrypted-media; fullscreen" allowFullScreen
-              style={{ border: 'none', display: 'block' }} />
+    <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', flexShrink: 0 }}>
+        <div style={{ color: TEXT, fontWeight: 700, fontSize: 14, flex: 1 }}>⚖ {entries[0]?.name} vs {entries[1]?.name}</div>
+        <button onClick={onClose} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 10px', color: MUTED, cursor: 'pointer', fontSize: 13 }}>✕</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, flex: 1, minHeight: 0, padding: '0 8px' }}>
+        {entries.map((entry, i) => (
+          <div key={entry.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: MUTED, padding: '3px 0', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {entry.name}{entry.timeStr ? ` · ${entry.timeStr}` : ''}
+            </div>
+            <iframe ref={refs[i]}
+              src={`https://www.youtube.com/embed/${entry.id}?enablejsapi=1&rel=0&modestbranding=1`}
+              style={{ flex: 1, border: 'none', borderRadius: 8, background: '#000', minHeight: 0, width: '100%' }}
+              allow="autoplay; encrypted-media" allowFullScreen />
           </div>
         ))}
+      </div>
+
+      <div style={{ padding: '8px 12px 12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+          <button onClick={restartBoth} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 12px', color: TEXT, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>⏮ Restart</button>
+          <button onClick={togglePlay} style={{ background: isPlaying ? GREEN + '22' : CARD, border: `1px solid ${isPlaying ? GREEN + '66' : BORDER}`, borderRadius: 8, padding: '7px 16px', color: isPlaying ? GREEN : TEXT, cursor: 'pointer', fontSize: 13, fontWeight: 700, minWidth: 80 }}>
+            {isPlaying ? '⏸ Pause' : '▶ Play'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+          {entries.map((entry, i) => (
+            <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>{entry.name}</span>
+              <span style={{ fontSize: 11, color: MUTED }}>start</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" value={rawT[i]}
+                onChange={e => { seeked.current = false; setIsPlaying(false); setRawT(prev => { const n = [...prev]; n[i] = e.target.value.replace(/[^0-9]/g, ''); return n }) }}
+                style={inputStyle} />
+              <span style={{ fontSize: 11, color: MUTED }}>s</span>
+              {liveT[i] !== null && (
+                <button onClick={() => { seeked.current = false; setIsPlaying(false); setRawT(prev => { const n = [...prev]; n[i] = String(liveT[i]); return n }) }}
+                  style={{ background: BLUE + '22', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 7px', color: BLUE, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                  📍 {liveT[i]}s
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center', fontSize: 10, color: MUTED, marginTop: 6 }}>
+          Play each video, pause at your sync point, tap 📍 — then ⏮ Restart plays both from those points.
+        </div>
       </div>
     </div>
   )
@@ -595,7 +709,7 @@ function OlcRiderList({ results, loading, lang, onPlay, onCompare, compareVideos
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {ilRiders.map(r => {
           const vid = ytId(r.youtubeUrl)
-          const isComparing = vid && compareVideos?.includes(vid)
+          const isComparing = vid && compareVideos?.some(v => v.id === vid)
           return (
             <div key={r.olcRiderId} style={{
               background: SURFACE, borderRadius: 10, padding: '10px 12px',
@@ -620,7 +734,7 @@ function OlcRiderList({ results, loading, lang, onPlay, onCompare, compareVideos
                   {r.pct && <OlcClassBadge pct={r.pct} />}
                   {vid && <YtPlayBtn onClick={() => onPlay(vid)} />}
                   {vid && onCompare && (
-                    <button onClick={() => onCompare(vid)} style={{
+                    <button onClick={() => onCompare(vid, r.name, r.finalTimeStr)} style={{
                       background: isComparing ? BLUE : 'none', border: `1px solid ${isComparing ? BLUE : BORDER}`,
                       borderRadius: 7, padding: '4px 8px', cursor: 'pointer',
                       color: isComparing ? '#fff' : MUTED, fontSize: 12,
@@ -649,11 +763,12 @@ function OlcSection({ lang }) {
   const [modalVideo, setModalVideo] = useState(null)
   const [compareVideos, setCompareVideos] = useState([])
 
-  function toggleCompare(vid) {
+  function toggleCompare(vid, name, timeStr) {
+    const entry = { id: vid, name, timeStr }
     setCompareVideos(prev => {
-      if (prev.includes(vid)) return prev.filter(v => v !== vid)
-      if (prev.length >= 2) return [prev[1], vid]
-      return [...prev, vid]
+      if (prev.find(v => v.id === vid)) return prev.filter(v => v.id !== vid)
+      if (prev.length >= 2) return [prev[1], entry]
+      return [...prev, entry]
     })
   }
 
@@ -790,7 +905,7 @@ function OlcSection({ lang }) {
       )}
 
       {compareVideos.length === 2 && (
-        <VideoCompareModal videoIds={compareVideos} onClose={() => setCompareVideos([])} />
+        <VideoCompareModal entries={compareVideos} onClose={() => setCompareVideos([])} />
       )}
 
       {modalVideo && (
