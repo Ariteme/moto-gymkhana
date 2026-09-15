@@ -27,7 +27,7 @@ function ytId(url) {
 function YtPlayBtn({ onClick }) {
   return (
     <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', lineHeight: 1 }}>
-      <svg width="30" height="21" viewBox="0 0 34 24" xmlns="http://www.w3.org/2000/svg">
+      <svg width="30" height="21" viewBox="0 0 34 24" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.6 }}>
         <rect width="34" height="24" rx="6" fill="#FF0000" />
         <path d="M14 8L23 12L14 16V8Z" fill="white" />
       </svg>
