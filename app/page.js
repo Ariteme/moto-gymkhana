@@ -177,6 +177,9 @@ export default function Home() {
               <Link href="/news" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 {T.news}
               </Link>
+              <Link href="/olc" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
+                🌍 OLC
+              </Link>
               <Link href="/admin" style={{ padding: '11px 22px', background: 'transparent', color: MUTED, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 {T.admin}
               </Link>
