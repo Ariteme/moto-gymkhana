@@ -16,6 +16,15 @@ const BLUE = '#1a5cff'
 const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const GOLD = '#ffc947'
+const YT_RED = '#ff0000'
+
+function ytId(url) {
+  if (!url) return null
+  if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
+  if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
+  if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
+  return null
+}
 
 function fmtDate(str) {
   return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -33,6 +42,7 @@ export default function MapsPage() {
   const [loading, setLoading] = useState(true)
   const [olcRound, setOlcRound] = useState(null)
   const [olcResults, setOlcResults] = useState(null)
+  const [modalVideo, setModalVideo] = useState(null)
 
   useEffect(() => {
     // Fetch OLC current round alongside local maps
@@ -113,7 +123,7 @@ export default function MapsPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {olcRound && (
-                <OlcCard round={olcRound} results={olcResults} lang={lang} />
+                <OlcCard round={olcRound} results={olcResults} lang={lang} onVideoClick={setModalVideo} />
               )}
               {maps.map(map => (
                 <MapCard key={map.name} map={map} lang={lang} />
@@ -123,10 +133,18 @@ export default function MapsPage() {
         </div>
       </div>
     </div>
+
+    {modalVideo && (
+      <div onClick={() => setModalVideo(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 900, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}>
+          <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${modalVideo}?autoplay=1`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{ border: 'none', display: 'block' }} />
+        </div>
+      </div>
+    )}
   )
 }
 
-function OlcCard({ round, results, lang }) {
+function OlcCard({ round, results, lang, onVideoClick }) {
   const il = results?.ilRiders ?? []
   const total = results?.totalRiders ?? 0
   return (
@@ -162,7 +180,8 @@ function OlcCard({ round, results, lang }) {
                 <span style={{ fontSize: 11, color: MUTED, width: 44, flexShrink: 0 }}>#{r.rank}/{total}</span>
                 <span style={{ flex: 1, fontSize: 13, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
                 {r.youtubeUrl && (
-                  <a href={r.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, fontSize: 15, flexShrink: 0 }}>▶</a>
+                  <button onClick={() => { const id = ytId(r.youtubeUrl); if (id) onVideoClick(id) }}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: YT_RED, fontSize: 16, lineHeight: 1, flexShrink: 0 }}>▶</button>
                 )}
                 <span style={{ color: GOLD, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{r.finalTimeStr}</span>
               </div>

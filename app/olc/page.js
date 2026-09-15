@@ -5,6 +5,16 @@ import Link from 'next/link'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { calcClass, CLASS_COLORS } from '@/lib/gymkhana'
 
+const YT_RED = '#ff0000'
+
+function ytId(url) {
+  if (!url) return null
+  if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
+  if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
+  if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
+  return null
+}
+
 const BG = '#07090f'
 const SURFACE = '#0c1118'
 const CARD = '#101821'
@@ -39,7 +49,7 @@ function ClassBadge({ pct }) {
   )
 }
 
-function RiderRow({ rider, totalRiders }) {
+function RiderRow({ rider, totalRiders, onVideoClick }) {
   return (
     <div style={{
       background: SURFACE, borderRadius: 10, padding: '10px 12px',
@@ -67,8 +77,8 @@ function RiderRow({ rider, totalRiders }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {rider.pct && <ClassBadge pct={rider.pct} />}
           {rider.youtubeUrl && (
-            <a href={rider.youtubeUrl} target="_blank" rel="noopener noreferrer"
-              style={{ color: MUTED, fontSize: 15, lineHeight: 1 }}>▶</a>
+            <button onClick={() => { const id = ytId(rider.youtubeUrl); if (id) onVideoClick(id) }}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: YT_RED, fontSize: 16, lineHeight: 1 }}>▶</button>
           )}
           <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{rider.finalTimeStr}</span>
         </div>
@@ -80,7 +90,7 @@ function RiderRow({ rider, totalRiders }) {
   )
 }
 
-function RoundResults({ results, loading }) {
+function RoundResults({ results, loading, onVideoClick }) {
   if (loading) return <div style={{ color: MUTED, fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Loading…</div>
   if (!results) return null
   const { ilRiders, totalRiders } = results
@@ -93,7 +103,7 @@ function RoundResults({ results, loading }) {
         🇮🇱 Israel — {ilRiders.length} of {totalRiders} riders globally
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {ilRiders.map(r => <RiderRow key={r.olcRiderId} rider={r} totalRiders={totalRiders} />)}
+        {ilRiders.map(r => <RiderRow key={r.olcRiderId} rider={r} totalRiders={totalRiders} onVideoClick={onVideoClick} />)}
       </div>
     </div>
   )
@@ -108,6 +118,7 @@ export default function OlcPage() {
   const [resultsMap, setResultsMap] = useState({})
   const [loadingResults, setLoadingResults] = useState({})
   const [expanded, setExpanded] = useState({})
+  const [modalVideo, setModalVideo] = useState(null)
 
   useEffect(() => {
     fetch('/api/olc?action=rounds')
@@ -207,7 +218,7 @@ export default function OlcPage() {
                   <div style={{ fontSize: 12, color: MUTED, marginBottom: 16 }}>
                     {fmtDate(current.startDate)} – {fmtDate(current.endDate)} · {daysStatus(current.endDate)}
                   </div>
-                  <RoundResults results={resultsMap[current.id]} loading={!!loadingResults[current.id]} />
+                  <RoundResults results={resultsMap[current.id]} loading={!!loadingResults[current.id]} onVideoClick={setModalVideo} />
                 </div>
               </div>
             )}
@@ -249,7 +260,7 @@ export default function OlcPage() {
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             {round.mapUrl && <img src={round.mapUrl} alt={round.name} style={{ width: '100%', display: 'block' }} />}
                             <div style={{ padding: '12px 14px 16px' }}>
-                              <RoundResults results={res} loading={isLoading} />
+                              <RoundResults results={res} loading={isLoading} onVideoClick={setModalVideo} />
                             </div>
                           </div>
                         )}
@@ -269,5 +280,13 @@ export default function OlcPage() {
         )}
       </div>
     </div>
+
+    {modalVideo && (
+      <div onClick={() => setModalVideo(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 900, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}>
+          <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${modalVideo}?autoplay=1`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{ border: 'none', display: 'block' }} />
+        </div>
+      </div>
+    )}
   )
 }

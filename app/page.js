@@ -18,6 +18,15 @@ const BLUE = '#1a5cff'
 const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const GOLD = '#ffc947'
+const YT_RED = '#ff0000'
+
+function ytId(url) {
+  if (!url) return null
+  if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
+  if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
+  if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
+  return null
+}
 const SILVER = '#b8c8d4'
 const BRONZE = '#cd8b4e'
 
@@ -136,14 +145,6 @@ export default function Home() {
 
   const hasFilters = mapFilter || bikeFilter || riderFilter
 
-  function ytId(url) {
-    if (!url) return null
-    if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
-    if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0]
-    if (url.includes('/shorts/')) return url.split('/shorts/')[1].split('?')[0]
-    return null
-  }
-
   const toggleMap = (name) => setExpandedMaps(prev => ({ ...prev, [name]: !prev[name] }))
   const togglePodium = (name) => setExpandedPodiums(prev => ({ ...prev, [name]: !prev[name] }))
 
@@ -232,7 +233,7 @@ export default function Home() {
 
         {/* OLC OR LOCAL SECTIONS */}
         {mapFilter === '__OLC__' ? (
-          <OlcSection lang={lang} />
+          <OlcSection lang={lang} onVideoClick={setModalVideo} />
         ) : (<>
 
         {/* PER-MAP SECTIONS */}
@@ -548,7 +549,7 @@ function OlcClassBadge({ pct }) {
   )
 }
 
-function OlcRiderList({ results, loading, lang }) {
+function OlcRiderList({ results, loading, lang, onVideoClick }) {
   if (loading) return <div style={{ color: MUTED, fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Loading…</div>
   if (!results) return null
   const { ilRiders, totalRiders } = results
@@ -585,8 +586,9 @@ function OlcRiderList({ results, loading, lang }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {r.pct && <OlcClassBadge pct={r.pct} />}
-                {r.youtubeUrl && (
-                  <a href={r.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, fontSize: 15, lineHeight: 1 }}>▶</a>
+                {r.youtubeUrl && onVideoClick && (
+                  <button onClick={() => { const id = ytId(r.youtubeUrl); if (id) onVideoClick(id) }}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: YT_RED, fontSize: 16, lineHeight: 1 }}>▶</button>
                 )}
                 <span style={{ color: GREEN, fontWeight: 800, fontSize: 16 }}>{r.finalTimeStr}</span>
               </div>
@@ -599,7 +601,7 @@ function OlcRiderList({ results, loading, lang }) {
   )
 }
 
-function OlcSection({ lang }) {
+function OlcSection({ lang, onVideoClick }) {
   const [rounds, setRounds] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingPast, setLoadingPast] = useState(true)
@@ -672,7 +674,7 @@ function OlcSection({ lang }) {
             <div style={{ fontSize: 12, color: MUTED, marginBottom: 16 }}>
               {fmtDate(current.startDate)} – {fmtDate(current.endDate)}
             </div>
-            <OlcRiderList results={resultsMap[current.id]} loading={!!loadingResults[current.id]} lang={lang} />
+            <OlcRiderList results={resultsMap[current.id]} loading={!!loadingResults[current.id]} lang={lang} onVideoClick={onVideoClick} />
           </div>
         </div>
       )}
@@ -705,7 +707,7 @@ function OlcSection({ lang }) {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {round.mapUrl && <img src={round.mapUrl} alt={round.name} style={{ width: '100%', display: 'block' }} />}
                       <div style={{ padding: '12px 14px 16px' }}>
-                        <OlcRiderList results={res} loading={!!loadingResults[round.id]} lang={lang} />
+                        <OlcRiderList results={res} loading={!!loadingResults[round.id]} lang={lang} onVideoClick={onVideoClick} />
                       </div>
                     </div>
                   )}
