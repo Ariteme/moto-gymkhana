@@ -99,6 +99,7 @@ export default function OlcPage() {
   const { lang } = useLang()
   const [rounds, setRounds] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingPast, setLoadingPast] = useState(true)
   const [error, setError] = useState(null)
   const [resultsMap, setResultsMap] = useState({})
   const [loadingResults, setLoadingResults] = useState({})
@@ -111,11 +112,23 @@ export default function OlcPage() {
         const rds = data.rounds || []
         setRounds(rds)
         setLoading(false)
-        // Auto-load current (or most recent) round results
         const current = rds.find(r => r.isCurrent) ?? rds[0]
+        const past = rds.filter(r => r.id !== current?.id)
+        // Auto-load current round results
         if (current) loadResults(current.id)
+        // Eagerly fetch all past rounds to filter out ones without IL riders
+        Promise.allSettled(
+          past.map(r => fetch(`/api/olc?action=results&id=${r.id}`).then(res => res.json()))
+        ).then(results => {
+          const map = {}
+          past.forEach((r, i) => {
+            if (results[i].status === 'fulfilled') map[r.id] = results[i].value
+          })
+          setResultsMap(prev => ({ ...prev, ...map }))
+          setLoadingPast(false)
+        })
       })
-      .catch(e => { setError(e.message); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false); setLoadingPast(false) })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function loadResults(id) {
@@ -137,7 +150,9 @@ export default function OlcPage() {
   }
 
   const current = rounds.find(r => r.isCurrent) ?? rounds[0]
-  const past = rounds.filter(r => r !== current)
+  const allPast = rounds.filter(r => r !== current)
+  // Only show past rounds where Israeli riders participated
+  const past = allPast.filter(r => (resultsMap[r.id]?.ilRiders?.length ?? -1) > 0)
 
   return (
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
@@ -194,10 +209,11 @@ export default function OlcPage() {
             )}
 
             {/* PAST ROUNDS */}
-            {past.length > 0 && (
+            {(loadingPast || past.length > 0) && (
               <div>
                 <div style={{ fontSize: 11, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>
                   {lang === 'ru' ? 'Прошлые раунды' : 'Past rounds'}
+                  {loadingPast && <span style={{ marginLeft: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>loading…</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {past.map(round => {

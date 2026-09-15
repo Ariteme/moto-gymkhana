@@ -17,13 +17,36 @@ const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const GOLD = '#ffc947'
 
+function fmtDate(str) {
+  return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function daysStatus(endStr) {
+  const left = Math.ceil((new Date(endStr) - Date.now()) / 86400000)
+  return left > 0 ? `${left}d left` : 'ended'
+}
+
 export default function MapsPage() {
   const { lang } = useLang()
   const T = i18n[lang]
   const [maps, setMaps] = useState([])
   const [loading, setLoading] = useState(true)
+  const [olcRound, setOlcRound] = useState(null)
+  const [olcResults, setOlcResults] = useState(null)
 
   useEffect(() => {
+    // Fetch OLC current round alongside local maps
+    fetch('/api/olc?action=rounds')
+      .then(r => r.json())
+      .then(({ rounds = [] }) => {
+        const current = rounds.find(r => r.isCurrent) ?? rounds[0]
+        if (!current) return
+        setOlcRound(current)
+        return fetch(`/api/olc?action=results&id=${current.id}`).then(r => r.json())
+      })
+      .then(data => { if (data) setOlcResults(data) })
+      .catch(() => {})
+
     Promise.all([
       supabase.from('maps').select('name, image_url').order('name'),
       supabase.from('results').select('map_name, lap_time, riders(name, number)').eq('approved', true),
@@ -89,12 +112,72 @@ export default function MapsPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {olcRound && (
+                <OlcCard round={olcRound} results={olcResults} lang={lang} />
+              )}
               {maps.map(map => (
                 <MapCard key={map.name} map={map} lang={lang} />
               ))}
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function OlcCard({ round, results, lang }) {
+  const il = results?.ilRiders ?? []
+  const total = results?.totalRiders ?? 0
+  return (
+    <div style={{ background: CARD, borderRadius: 16, overflow: 'hidden', border: `2px solid ${BLUE}30` }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {round.mapUrl && <img src={round.mapUrl} alt={round.name} style={{ width: '100%', display: 'block' }} />}
+      <div style={{ padding: '14px 16px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ fontWeight: 800, fontSize: 17, color: TEXT, flex: 1 }}>🌍 {round.name}</div>
+          {round.isCurrent && (
+            <span style={{ background: 'rgba(0,255,153,0.15)', color: GREEN, border: `1px solid ${GREEN}40`, borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+              LIVE
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>
+          {fmtDate(round.startDate)} – {fmtDate(round.endDate)} · {daysStatus(round.endDate)}
+        </div>
+
+        {results === null ? (
+          <div style={{ color: MUTED, fontSize: 13, marginBottom: 14 }}>{lang === 'ru' ? 'Загрузка…' : 'Loading…'}</div>
+        ) : il.length === 0 ? (
+          <div style={{ color: MUTED, fontSize: 13, marginBottom: 14 }}>
+            {lang === 'ru' ? 'Израильских гонщиков пока нет' : 'No Israeli riders yet'}
+          </div>
+        ) : (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>
+              🇮🇱 {il.length} {lang === 'ru' ? 'израильских из' : 'Israeli of'} {total} {lang === 'ru' ? 'глобально' : 'globally'}
+            </div>
+            {il.slice(0, 3).map(r => (
+              <div key={r.olcRiderId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <span style={{ fontSize: 11, color: MUTED, width: 44, flexShrink: 0 }}>#{r.rank}/{total}</span>
+                <span style={{ flex: 1, fontSize: 13, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                <span style={{ color: GOLD, fontWeight: 700, fontSize: 13 }}>{r.finalTimeStr}</span>
+              </div>
+            ))}
+            {il.length > 3 && (
+              <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>+{il.length - 3} more…</div>
+            )}
+          </div>
+        )}
+
+        <Link href="/olc" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '8px 16px', borderRadius: 8,
+          background: 'rgba(26,92,255,0.08)', border: `1px solid ${BLUE}50`,
+          color: BLUE, fontSize: 13, fontWeight: 600, textDecoration: 'none',
+        }}>
+          {lang === 'ru' ? 'Все результаты OLC →' : 'Full OLC standings →'}
+        </Link>
       </div>
     </div>
   )
