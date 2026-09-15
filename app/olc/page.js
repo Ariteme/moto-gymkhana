@@ -119,6 +119,7 @@ export default function OlcPage() {
   const [loadingResults, setLoadingResults] = useState({})
   const [expanded, setExpanded] = useState({})
   const [modalVideo, setModalVideo] = useState(null)
+  const [showAllPast, setShowAllPast] = useState(false)
 
   useEffect(() => {
     fetch('/api/olc?action=rounds')
@@ -170,6 +171,7 @@ export default function OlcPage() {
   const past = allPast.filter(r => (resultsMap[r.id]?.ilRiders?.length ?? -1) > 0)
 
   return (
+    <>
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', color: TEXT, boxShadow: '0 0 80px rgba(0,0,0,0.7)' }}>
 
@@ -231,7 +233,7 @@ export default function OlcPage() {
                   {loadingPast && <span style={{ marginLeft: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>loading…</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {past.map(round => {
+                  {(showAllPast ? past : past.slice(0, 5)).map(round => {
                     const isOpen = !!expanded[round.id]
                     const res = resultsMap[round.id]
                     const isLoading = !!loadingResults[round.id]
@@ -267,6 +269,16 @@ export default function OlcPage() {
                       </div>
                     )
                   })}
+                  {past.length > 5 && (
+                    <button onClick={() => setShowAllPast(v => !v)} style={{
+                      background: 'none', border: `1px solid ${BORDER}`, borderRadius: 10,
+                      padding: '10px 14px', color: MUTED, fontSize: 13, cursor: 'pointer', textAlign: 'center',
+                    }}>
+                      {showAllPast
+                        ? (lang === 'ru' ? '▲ Свернуть' : '▲ Show less')
+                        : (lang === 'ru' ? `▼ Показать все (${past.length - 5} ещё)` : `▼ Show all (${past.length - 5} more)`)}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -288,5 +300,6 @@ export default function OlcPage() {
         </div>
       </div>
     )}
+    </>
   )
 }

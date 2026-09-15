@@ -608,6 +608,7 @@ function OlcSection({ lang, onVideoClick }) {
   const [resultsMap, setResultsMap] = useState({})
   const [loadingResults, setLoadingResults] = useState({})
   const [expanded, setExpanded] = useState({})
+  const [showAllPast, setShowAllPast] = useState(false)
 
   function loadResults(id, currentMap) {
     if (currentMap[id] || loadingResults[id]) return
@@ -686,7 +687,7 @@ function OlcSection({ lang, onVideoClick }) {
             {loadingPast && <span style={{ marginLeft: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>loading…</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {past.map(round => {
+            {(showAllPast ? past : past.slice(0, 5)).map(round => {
               const isOpen = !!expanded[round.id]
               const res = resultsMap[round.id]
               return (
@@ -714,6 +715,16 @@ function OlcSection({ lang, onVideoClick }) {
                 </div>
               )
             })}
+            {past.length > 5 && (
+              <button onClick={() => setShowAllPast(v => !v)} style={{
+                background: 'none', border: `1px solid ${BORDER}`, borderRadius: 10,
+                padding: '10px 14px', color: MUTED, fontSize: 13, cursor: 'pointer', width: '100%',
+              }}>
+                {showAllPast
+                  ? (lang === 'ru' ? '▲ Свернуть' : '▲ Show less')
+                  : (lang === 'ru' ? `▼ Показать все (${past.length - 5} ещё)` : `▼ Show all (${past.length - 5} more)`)}
+              </button>
+            )}
           </div>
         </div>
       )}

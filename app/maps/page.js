@@ -89,6 +89,7 @@ export default function MapsPage() {
   }, [])
 
   return (
+    <>
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', color: TEXT, boxShadow: '0 0 80px rgba(0,0,0,0.7)' }}>
 
@@ -141,6 +142,7 @@ export default function MapsPage() {
         </div>
       </div>
     )}
+    </>
   )
 }
 
