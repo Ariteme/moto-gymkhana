@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { use } from 'react'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { i18n } from '@/lib/i18n'
+import { GYMKHANA_MAPS, calcClass, CLASS_COLORS } from '@/lib/gymkhana'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -27,6 +28,7 @@ export default function RiderProfile({ params }) {
   const [loading, setLoading] = useState(true)
   const [mapFilter, setMapFilter] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [worldRecords, setWorldRecords] = useState({})
 
   useEffect(() => {
     supabase
@@ -37,6 +39,19 @@ export default function RiderProfile({ params }) {
       .order('created_at', { ascending: true })
       .then(({ data }) => { setRuns(data || []); setLoading(false) })
   }, [riderName])
+
+  useEffect(() => {
+    if (runs.length === 0) return
+    const gymkhanaMaps = [...new Set(runs.map(r => r.map_name))].filter(m => m in GYMKHANA_MAPS)
+    if (gymkhanaMaps.length === 0) return
+    Promise.all(gymkhanaMaps.map(m =>
+      fetch(`/api/gymkhana-class?map=${encodeURIComponent(m)}`).then(r => r.json()).catch(() => ({}))
+    )).then(results => {
+      const records = {}
+      gymkhanaMaps.forEach((m, i) => { if (results[i]?.worldRecord) records[m] = results[i].worldRecord })
+      setWorldRecords(records)
+    })
+  }, [runs])
 
   const bestPerMap = {}
   for (const r of runs) {
@@ -150,6 +165,7 @@ export default function RiderProfile({ params }) {
                   {ytId(run.youtube_url) && (
                     <a href={run.youtube_url} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, fontSize: 18 }}>▶</a>
                   )}
+                  {worldRecords[mapName] && <RiderClassBadge lapTime={Number(run.lap_time)} worldRecord={worldRecords[mapName]} />}
                   <div style={{ color: i === 0 ? GOLD : GREEN, fontWeight: 800, fontSize: 20 }}>{Number(run.lap_time).toFixed(2)}s</div>
                 </div>
               </div>
@@ -216,6 +232,22 @@ export default function RiderProfile({ params }) {
       )}
     </div>
     </div>
+  )
+}
+
+function RiderClassBadge({ lapTime, worldRecord }) {
+  const cls = calcClass(lapTime, worldRecord)
+  if (!cls) return null
+  const c = CLASS_COLORS[cls]
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+      borderRadius: 5, padding: '2px 6px', fontSize: 11, fontWeight: 800,
+      letterSpacing: 0.5, lineHeight: 1.4,
+    }}>
+      {cls}
+    </span>
   )
 }
 

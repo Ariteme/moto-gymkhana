@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { i18n } from '@/lib/i18n'
 import CompareModal from '@/app/components/CompareModal'
+import { GYMKHANA_MAPS, calcClass, CLASS_COLORS } from '@/lib/gymkhana'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -35,6 +36,7 @@ export default function Home() {
   const [expandedPodiums, setExpandedPodiums] = useState({})
   const [copiedId, setCopiedId] = useState(null)
   const [compareRuns, setCompareRuns] = useState([])
+  const [worldRecords, setWorldRecords] = useState({})
 
   function toggleCompare(run) {
     setCompareRuns(prev => {
@@ -77,6 +79,19 @@ export default function Home() {
       .order('name')
       .then(({ data }) => setDbMaps(data || []))
   }, [])
+
+  useEffect(() => {
+    if (data.length === 0) return
+    const mapsInData = [...new Set(data.map(r => r.map_name))].filter(m => m in GYMKHANA_MAPS)
+    if (mapsInData.length === 0) return
+    Promise.all(mapsInData.map(m =>
+      fetch(`/api/gymkhana-class?map=${encodeURIComponent(m)}`).then(r => r.json()).catch(() => ({}))
+    )).then(results => {
+      const records = {}
+      mapsInData.forEach((m, i) => { if (results[i]?.worldRecord) records[m] = results[i].worldRecord })
+      setWorldRecords(records)
+    })
+  }, [data])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -327,7 +342,10 @@ export default function Home() {
                           {r.riders?.number && <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginRight: 4 }}>#{r.riders.number}</span>}
                           <Link href={`/riders/${encodeURIComponent(r.riders?.name)}`} style={{ fontWeight: 700, fontSize: 15, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', textDecoration: 'none' }}>{r.riders?.name}</Link>
                         </div>
-                        <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {worldRecords[r.map_name] && <ClassBadge lapTime={Number(r.lap_time)} worldRecord={worldRecords[r.map_name]} />}
+                          <div style={{ color: GREEN, fontWeight: 900, fontSize: 20, textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{Number(r.lap_time).toFixed(2)}s</div>
+                        </div>
                       </div>
                     </div>
                     <div style={{ padding: '9px 12px', display: 'flex', gap: 8, fontSize: 12, color: MUTED, alignItems: 'center' }}>
@@ -354,6 +372,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {worldRecords[r.map_name] && <ClassBadge lapTime={Number(r.lap_time)} worldRecord={worldRecords[r.map_name]} />}
                       <div style={{ color: GREEN, fontWeight: 800, fontSize: 19 }}>{Number(r.lap_time).toFixed(2)}s</div>
                       <button onClick={() => handleShare(r)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer', color: copiedId === r.id ? GREEN : MUTED, fontSize: 12 }}>
                         {copiedId === r.id ? T.copied : '↗'}
@@ -415,6 +434,22 @@ export default function Home() {
         </div>
       )}
     </div>
+  )
+}
+
+function ClassBadge({ lapTime, worldRecord }) {
+  const cls = calcClass(lapTime, worldRecord)
+  if (!cls) return null
+  const c = CLASS_COLORS[cls]
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+      borderRadius: 5, padding: '2px 6px', fontSize: 11, fontWeight: 800,
+      letterSpacing: 0.5, lineHeight: 1.4, flexShrink: 0,
+    }}>
+      {cls}
+    </span>
   )
 }
 
