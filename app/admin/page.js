@@ -49,6 +49,8 @@ export default function Admin() {
   // Map images
   const [maps, setMaps] = useState([])
   const [uploadingMapId, setUploadingMapId] = useState(null)
+  const [mapForm, setMapForm] = useState({ name: '' })
+  const [mapSaving, setMapSaving] = useState(false)
 
   useEffect(() => {
     if (sessionStorage.getItem('admin_auth') === '1') {
@@ -120,6 +122,29 @@ export default function Admin() {
     const { error } = await supabase.from('results').delete().eq('id', id)
     if (error) { alert('Delete failed: ' + error.message); return }
     fetchAll()
+  }
+
+  const addMap = async (e) => {
+    e.preventDefault()
+    const name = mapForm.name.trim()
+    if (!name) return
+    if (maps.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+      alert('A map with that name already exists.')
+      return
+    }
+    setMapSaving(true)
+    const { error } = await supabase.from('maps').insert({ name })
+    if (error) { alert('Failed: ' + error.message); setMapSaving(false); return }
+    setMapForm({ name: '' })
+    setMapSaving(false)
+    await fetchAll()
+  }
+
+  const deleteMap = async (map) => {
+    if (!confirm(`Delete map "${map.name}"?\n\nThis will NOT delete results logged against it.`)) return
+    const { error } = await supabase.from('maps').delete().eq('id', map.id)
+    if (error) { alert('Delete failed: ' + error.message); return }
+    await fetchAll()
   }
 
   const mergeRiders = async () => {
@@ -423,6 +448,27 @@ export default function Admin() {
         {/* ── TOOLS TAB ── */}
         {tab === 'tools' && (
           <>
+            {/* Add map */}
+            <SectionTitle>Add map</SectionTitle>
+            <form onSubmit={addMap} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, marginBottom: 28 }}>
+              <Field label="Map name">
+                <input
+                  value={mapForm.name}
+                  onChange={e => setMapForm({ name: e.target.value })}
+                  placeholder="e.g. Pita GP"
+                  style={inputSt}
+                  required
+                />
+              </Field>
+              <button type="submit" disabled={mapSaving || !mapForm.name.trim()} style={{
+                width: '100%', padding: '12px 16px', background: GREEN, color: '#000',
+                border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+                opacity: mapSaving || !mapForm.name.trim() ? 0.5 : 1,
+              }}>
+                {mapSaving ? 'Saving…' : '➕ Add Map'}
+              </button>
+            </form>
+
             {/* Map images */}
             <SectionTitle>Map images</SectionTitle>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, marginBottom: 28 }}>
@@ -464,6 +510,13 @@ export default function Admin() {
                       }}
                     />
                   </label>
+                  <button
+                    onClick={() => deleteMap(map)}
+                    style={{ padding: '7px 10px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 8, color: RED, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}
+                    title="Delete map"
+                  >
+                    🗑
+                  </button>
                 </div>
               ))}
               {maps.length === 0 && <div style={{ fontSize: 13, color: MUTED }}>No maps yet.</div>}
