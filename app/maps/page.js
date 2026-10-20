@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { i18n } from '@/lib/i18n'
+import { GYMKHANA_MAPS, calcClass, CLASS_COLORS } from '@/lib/gymkhana'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -16,6 +17,12 @@ const BLUE = '#1a5cff'
 const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const GOLD = '#ffc947'
+
+const CLS_THRESHOLDS = [
+  [105, 'A'], [110, 'C1'], [115, 'C2'], [120, 'C3'],
+  [130, 'D1'], [140, 'D2'], [150, 'D3'], [160, 'D4'],
+]
+
 function ytId(url) {
   if (!url) return null
   if (url.includes('watch?v=')) return url.split('v=')[1].split('&')[0]
@@ -44,6 +51,12 @@ function daysStatus(endStr) {
   return left > 0 ? `${left}d left` : 'ended'
 }
 
+function fmtSec(s) {
+  const m = Math.floor(s / 60)
+  const rem = (s - m * 60).toFixed(2)
+  return `${String(m).padStart(2, '0')}:${rem.padStart(5, '0')}`
+}
+
 export default function MapsPage() {
   const { lang } = useLang()
   const T = i18n[lang]
@@ -52,9 +65,10 @@ export default function MapsPage() {
   const [olcRound, setOlcRound] = useState(null)
   const [olcResults, setOlcResults] = useState(null)
   const [modalVideo, setModalVideo] = useState(null)
+  const [classMapData, setClassMapData] = useState([])
+  const [classMapStats, setClassMapStats] = useState({})
 
   useEffect(() => {
-    // Fetch OLC current round alongside local maps
     fetch('/api/olc?action=rounds')
       .then(r => r.json())
       .then(({ rounds = [] }) => {
@@ -66,12 +80,23 @@ export default function MapsPage() {
       .then(data => { if (data) setOlcResults(data) })
       .catch(() => {})
 
+    fetch('/api/gymkhana-maps')
+      .then(r => r.json())
+      .then(({ maps: m = [] }) => setClassMapData(m))
+      .catch(() => {})
+
     Promise.all([
       supabase.from('maps').select('name, image_url').order('name'),
       supabase.from('results').select('map_name, lap_time, riders(name, number)').eq('approved', true),
     ]).then(([mapsRes, runsRes]) => {
       const dbMaps = (mapsRes.data || []).filter(m => !/^Gymfun OLC/i.test(m.name))
       const runs = (runsRes.data || []).filter(r => !/^Gymfun OLC/i.test(r.map_name))
+
+      // Class map stats
+      const gymStats = {}
+      for (const name of Object.keys(GYMKHANA_MAPS)) {
+        gymStats[name] = { totalRuns: 0, riders: new Set(), bestTime: Infinity, bestRider: null, bestRiderNumber: null }
+      }
 
       const stats = {}
       for (const r of runs) {
@@ -82,17 +107,29 @@ export default function MapsPage() {
         if (r.riders?.name) s.riders.add(r.riders.name)
         const t = Number(r.lap_time)
         if (t < s.bestTime) { s.bestTime = t; s.bestRider = r.riders?.name; s.bestRiderNumber = r.riders?.number ?? null }
-      }
 
-      setMaps(dbMaps.map(m => ({
-        name: m.name,
-        image_url: m.image_url,
-        totalRuns: stats[m.name]?.totalRuns ?? 0,
-        uniqueRiders: stats[m.name]?.riders.size ?? 0,
-        bestTime: stats[m.name]?.bestTime < Infinity ? stats[m.name].bestTime : null,
-        bestRider: stats[m.name]?.bestRider ?? null,
-        bestRiderNumber: stats[m.name]?.bestRiderNumber ?? null,
-      })))
+        if (name in gymStats) {
+          const gs = gymStats[name]
+          gs.totalRuns++
+          if (r.riders?.name) gs.riders.add(r.riders.name)
+          if (t < gs.bestTime) { gs.bestTime = t; gs.bestRider = r.riders?.name; gs.bestRiderNumber = r.riders?.number ?? null }
+        }
+      }
+      setClassMapStats(gymStats)
+
+      setMaps(
+        dbMaps
+          .filter(m => !(m.name in GYMKHANA_MAPS))
+          .map(m => ({
+            name: m.name,
+            image_url: m.image_url,
+            totalRuns: stats[m.name]?.totalRuns ?? 0,
+            uniqueRiders: stats[m.name]?.riders.size ?? 0,
+            bestTime: stats[m.name]?.bestTime < Infinity ? stats[m.name].bestTime : null,
+            bestRider: stats[m.name]?.bestRider ?? null,
+            bestRiderNumber: stats[m.name]?.bestRiderNumber ?? null,
+          }))
+      )
       setLoading(false)
     })
   }, [])
@@ -125,19 +162,53 @@ export default function MapsPage() {
         <div style={{ padding: '16px 14px 40px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>{T.loading}</div>
-          ) : maps.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🗺</div>
-              <div style={{ fontSize: 16, color: TEXT }}>No maps yet</div>
-            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {olcRound && (
                 <OlcCard round={olcRound} results={olcResults} lang={lang} onVideoClick={setModalVideo} />
               )}
-              {maps.map(map => (
-                <MapCard key={map.name} map={map} lang={lang} />
-              ))}
+
+              {/* GYMKHANA CLASS MAPS */}
+              {classMapData.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12, paddingLeft: 2 }}>
+                    🏆 {lang === 'ru' ? 'Карты для зачёта класса' : 'Class rating maps'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {classMapData.map(m => (
+                      <GymkhanaClassMapCard
+                        key={m.name}
+                        map={m}
+                        localStats={classMapStats[m.name]}
+                        lang={lang}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* LOCAL MAPS */}
+              {maps.length > 0 && (
+                <div>
+                  {classMapData.length > 0 && (
+                    <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12, paddingLeft: 2, marginTop: 4 }}>
+                      🏁 {lang === 'ru' ? 'Локальные карты' : 'Local maps'}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {maps.map(map => (
+                      <MapCard key={map.name} map={map} lang={lang} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {classMapData.length === 0 && maps.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '64px 20px', color: MUTED }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🗺</div>
+                  <div style={{ fontSize: 16, color: TEXT }}>No maps yet</div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -152,6 +223,120 @@ export default function MapsPage() {
       </div>
     )}
     </>
+  )
+}
+
+function GymkhanaClassMapCard({ map, localStats, lang }) {
+  const hasLocal = localStats && localStats.bestTime < Infinity
+  const localClass = hasLocal && map.worldRecord ? calcClass(localStats.bestTime, map.worldRecord) : null
+  const localColors = localClass ? CLASS_COLORS[localClass] : null
+  const trackUrl = `https://gymkhana-cup.ru/competitions/figure?id=${map.id}`
+
+  return (
+    <div style={{ background: CARD, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {map.imageUrl && <img src={map.imageUrl} alt={`${map.name} layout`} style={{ width: '100%', display: 'block' }} />}
+      <div style={{ padding: '14px 16px 16px' }}>
+
+        {/* Title + external link */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <div style={{ fontWeight: 800, fontSize: 17, color: TEXT, flex: 1 }}>🏆 {map.name}</div>
+          <a
+            href={trackUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 11, color: MUTED, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
+          >
+            gymkhana-cup.ru ↗
+          </a>
+        </div>
+
+        {/* WR + global count */}
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, flexWrap: 'wrap' }}>
+          {map.worldRecordStr && (
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 3 }}>
+                🌍 {lang === 'ru' ? 'Мировой рекорд' : 'World record'}
+              </div>
+              <div style={{ color: GOLD, fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{map.worldRecordStr}</div>
+            </div>
+          )}
+          {map.participants && (
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 3 }}>
+                {lang === 'ru' ? 'Участников глобально' : 'Global riders'}
+              </div>
+              <div style={{ color: TEXT, fontWeight: 700, fontSize: 22, lineHeight: 1 }}>{map.participants.toLocaleString()}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Class thresholds */}
+        {map.worldRecord && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>
+              {lang === 'ru' ? 'Нормативы классов' : 'Class thresholds'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
+              {CLS_THRESHOLDS.map(([pct, label]) => {
+                const c = CLASS_COLORS[label]
+                const maxTime = map.worldRecord * pct / 100
+                return (
+                  <div key={label} style={{
+                    background: c.bg, border: `1px solid ${c.border}`,
+                    borderRadius: 8, padding: '5px 7px',
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: c.text, letterSpacing: 1 }}>{label}</div>
+                    <div style={{ fontSize: 11, color: TEXT, fontVariantNumeric: 'tabular-nums' }}>≤{fmtSec(maxTime)}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Local best */}
+        {hasLocal && (
+          <div style={{ marginBottom: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6 }}>
+              🇮🇱 {lang === 'ru' ? 'Лучший локальный результат' : 'Best local result'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {localStats.bestRiderNumber && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: GOLD }}>#{localStats.bestRiderNumber}</span>
+              )}
+              <span style={{ flex: 1, fontSize: 13, color: TEXT }}>{localStats.bestRider}</span>
+              <span style={{ fontWeight: 800, fontSize: 15, color: GOLD }}>{fmtSec(localStats.bestTime)}</span>
+              {localClass && localColors && (
+                <span style={{
+                  background: localColors.bg, color: localColors.text, border: `1px solid ${localColors.border}`,
+                  borderRadius: 6, padding: '2px 7px', fontSize: 11, fontWeight: 700,
+                }}>
+                  {localClass}
+                </span>
+              )}
+            </div>
+            {localStats.riders?.size > 0 && (
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 5 }}>
+                {localStats.riders.size} {lang === 'ru' ? 'гонщиков' : 'riders'} · {localStats.totalRuns} {lang === 'ru' ? 'заездов' : 'runs'}
+              </div>
+            )}
+          </div>
+        )}
+
+        <Link
+          href={`/?map=${encodeURIComponent(map.name)}`}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 8,
+            background: 'rgba(0,255,153,0.08)', border: `1px solid ${GREEN}50`,
+            color: GREEN, fontSize: 13, fontWeight: 600, textDecoration: 'none',
+          }}
+        >
+          {lang === 'ru' ? 'Таблица лидеров →' : 'View leaderboard →'}
+        </Link>
+      </div>
+    </div>
   )
 }
 
