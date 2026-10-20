@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useAuth } from '@/lib/AuthContext'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -23,10 +24,8 @@ const PREDEFINED_TAGS = {
 }
 
 export default function Admin() {
-  const [authed, setAuthed] = useState(false)
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState(false)
-  const [adminPassword, setAdminPassword] = useState('')
+  const { user, isAdmin, adminToken, authLoading, signIn, signOut } = useAuth()
+  const adminPassword = adminToken  // alias — existing code references adminPassword
   const [tab, setTab] = useState('results')
 
   // Results tab
@@ -53,12 +52,6 @@ export default function Admin() {
   const [mapForm, setMapForm] = useState({ name: '' })
   const [mapSaving, setMapSaving] = useState(false)
 
-  useEffect(() => {
-    if (sessionStorage.getItem('admin_auth') === '1') {
-      setAuthed(true)
-      setAdminPassword(sessionStorage.getItem('admin_pw') || '')
-    }
-  }, [])
 
   const fetchAll = async () => {
     const [{ data: results }, { data: riderRows }, { data: tvRows }, { data: mapRows }] = await Promise.all([
@@ -91,26 +84,8 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    if (authed) fetchAll()
-  }, [authed])
-
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    const res = await fetch('/api/admin-auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    })
-    if (res.ok) {
-      sessionStorage.setItem('admin_auth', '1')
-      sessionStorage.setItem('admin_pw', password)
-      setAdminPassword(password)
-      setAuthed(true)
-    } else {
-      setAuthError(true)
-      setPassword('')
-    }
-  }
+    if (isAdmin) fetchAll()
+  }, [isAdmin])
 
   const approve = async (id) => {
     const { error } = await supabase.from('results').update({ approved: true }).eq('id', id)
@@ -234,29 +209,42 @@ export default function Admin() {
     return null
   }
 
-  /* ── LOGIN ── */
-  if (!authed) return (
+  /* ── AUTH GATE ── */
+  const gate = (content) => (
     <div style={{ background: '#030508', minHeight: '100vh', fontFamily: 'var(--font-geist-sans, Arial, sans-serif)' }}>
     <div style={{ maxWidth: 700, margin: '0 auto', background: BG, minHeight: '100vh', boxShadow: '0 0 80px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 360 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>Admin Access</div>
-          <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Israeli Moto Gymkhana</div>
-        </div>
-        <form onSubmit={handleLogin} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24 }}>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>Password</label>
-          <input type="password" placeholder="Enter password" value={password}
-            onChange={(e) => { setPassword(e.target.value); setAuthError(false) }} autoFocus
-            style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${authError ? RED : BORDER}`, background: BG, color: TEXT, outline: 'none', boxSizing: 'border-box', fontSize: 16, marginBottom: 8 }}
-          />
-          {authError && <div style={{ color: RED, fontSize: 13, marginBottom: 12, padding: '7px 12px', background: `${RED}12`, borderRadius: 8, border: `1px solid ${RED}30` }}>✗ Wrong password</div>}
-          <button type="submit" style={{ width: '100%', marginTop: 8, padding: '13px 20px', background: GREEN, color: '#000', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 16, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,255,153,0.25)' }}>Enter</button>
-        </form>
-      </div>
+      <div style={{ width: '100%', maxWidth: 360, textAlign: 'center' }}>{content}</div>
     </div>
     </div>
   )
+
+  if (authLoading) return gate(
+    <div style={{ color: MUTED, fontSize: 15 }}>Loading…</div>
+  )
+
+  if (!user) return gate(<>
+    <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+    <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 4 }}>Admin Access</div>
+    <div style={{ fontSize: 13, color: MUTED, marginBottom: 28 }}>Israeli Moto Gymkhana</div>
+    <button onClick={signIn} style={{
+      width: '100%', padding: '13px 20px', background: '#fff', color: '#1a1a1a',
+      border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+      boxShadow: '0 4px 20px rgba(255,255,255,0.12)',
+    }}>
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Sign in with Google
+    </button>
+  </>)
+
+  if (!isAdmin) return gate(<>
+    <div style={{ fontSize: 48, marginBottom: 12 }}>⛔</div>
+    <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Access denied</div>
+    <div style={{ fontSize: 13, color: MUTED, marginBottom: 24 }}>{user.email}</div>
+    <button onClick={signOut} style={{ padding: '10px 22px', background: 'transparent', border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 9, fontSize: 14, cursor: 'pointer' }}>
+      Sign out
+    </button>
+  </>)
 
   /* ── ADMIN PANEL ── */
   const pending = data.filter(r => !r.approved)
@@ -272,9 +260,10 @@ export default function Admin() {
         <div style={{ padding: '14px 16px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <Link href="/" style={{ color: MUTED, fontSize: 13, padding: '6px 10px', border: `1px solid ${BORDER}`, borderRadius: 8 }}>← Back</Link>
-            <button onClick={() => { sessionStorage.removeItem('admin_auth'); sessionStorage.removeItem('admin_pw'); setAuthed(false) }}
-              style={{ background: 'none', border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
-              🔒 Lock
+            <div style={{ flex: 1, fontSize: 12, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
+            <button onClick={signOut}
+              style={{ background: 'none', border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>
+              Sign out
             </button>
           </div>
           <h1 style={{ margin: '0 0 16px', fontSize: 24, fontWeight: 900, color: TEXT }}>🛠 Admin Panel</h1>

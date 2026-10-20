@@ -8,6 +8,7 @@ import { useLang, LangSwitcher } from '@/lib/LangContext'
 import { i18n } from '@/lib/i18n'
 import CompareModal from '@/app/components/CompareModal'
 import { GYMKHANA_MAPS, calcClass, CLASS_COLORS } from '@/lib/gymkhana'
+import { useAuth } from '@/lib/AuthContext'
 
 const BG = '#07090f'
 const SURFACE = '#0c1118'
@@ -32,6 +33,7 @@ const BRONZE = '#cd8b4e'
 
 export default function Home() {
   const { lang } = useLang()
+  const { isAdmin } = useAuth()
   const T = i18n[lang]
 
   const [data, setData] = useState([])
@@ -156,7 +158,10 @@ export default function Home() {
         <div style={{ background: `linear-gradient(180deg, #0a1020 0%, ${SURFACE} 100%)`, borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ height: 4, background: `linear-gradient(90deg, ${BLUE}, ${GREEN}, ${BLUE})` }} />
           <div style={{ textAlign: 'center', padding: '20px 16px 22px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 16, right: 16 }}>
+            <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isAdmin && (
+                <Link href="/admin" style={{ fontSize: 18, textDecoration: 'none', opacity: 0.5, lineHeight: 1 }} title="Admin panel">⚙</Link>
+              )}
               <LangSwitcher />
             </div>
             <div style={{ color: BLUE, fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
@@ -178,9 +183,6 @@ export default function Home() {
               </Link>
               <Link href="/news" style={{ padding: '11px 22px', background: 'transparent', color: TEXT, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
                 {T.news}
-              </Link>
-              <Link href="/admin" style={{ padding: '11px 22px', background: 'transparent', color: MUTED, borderRadius: 10, fontWeight: 600, fontSize: 14, border: `1px solid ${BORDER}` }}>
-                {T.admin}
               </Link>
             </div>
           </div>
