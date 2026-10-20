@@ -133,8 +133,13 @@ export default function Admin() {
       return
     }
     setMapSaving(true)
-    const { error } = await supabase.from('maps').insert({ name })
-    if (error) { alert('Failed: ' + error.message); setMapSaving(false); return }
+    const res = await fetch('/api/admin-maps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, name }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Failed: ' + json.error); setMapSaving(false); return }
     setMapForm({ name: '' })
     setMapSaving(false)
     await fetchAll()
@@ -142,8 +147,13 @@ export default function Admin() {
 
   const deleteMap = async (map) => {
     if (!confirm(`Delete map "${map.name}"?\n\nThis will NOT delete results logged against it.`)) return
-    const { error } = await supabase.from('maps').delete().eq('id', map.id)
-    if (error) { alert('Delete failed: ' + error.message); return }
+    const res = await fetch('/api/admin-maps', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: adminPassword, id: map.id }),
+    })
+    const json = await res.json()
+    if (!res.ok) { alert('Delete failed: ' + json.error); return }
     await fetchAll()
   }
 
