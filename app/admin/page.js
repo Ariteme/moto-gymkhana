@@ -14,6 +14,7 @@ const TEXT = '#dce8f4'
 const MUTED = '#7a90a8'
 const ORANGE = '#ffa502'
 const RED = '#ff4757'
+const GOLD = '#ffc947'
 
 const PREDEFINED_TAGS = {
   'Difficulty': ['Easy', 'Medium', 'Hard'],
@@ -284,6 +285,7 @@ export default function Admin() {
               { key: 'results', label: `Results${pending.length ? ` (${pending.length}⚠)` : ''}` },
               { key: 'training', label: `Training (${trainingVideos.length})` },
               { key: 'tools', label: 'Tools' },
+              { key: 'stats', label: 'Stats' },
             ].map(t => (
               <button key={t.key} onClick={() => setTab(t.key)} style={{
                 padding: '9px 16px', background: 'none', border: 'none',
@@ -568,6 +570,46 @@ export default function Admin() {
           </>
         )}
 
+        {/* ── STATS TAB ── */}
+        {tab === 'stats' && (
+          <>
+            {/* Overview tiles */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+              <Stat value={data.length} label="Total runs" color={TEXT} />
+              <Stat value={approved.length} label="Approved" color={GREEN} />
+              <Stat value={pending.length} label="Pending" color={pending.length > 0 ? ORANGE : MUTED} />
+              <Stat value={riders.length} label="Riders" color={BLUE} />
+              <Stat value={maps.length} label="Maps" color={MUTED} />
+              <Stat value={trainingVideos.length} label="Videos" color={MUTED} />
+            </div>
+
+            {/* Weekly activity */}
+            <SectionTitle>Submissions — last 8 weeks</SectionTitle>
+            <WeeklyActivity results={data} />
+
+            {/* Per-map */}
+            <SectionTitle style={{ marginTop: 24 }}>Runs per map</SectionTitle>
+            <MapStats results={data} />
+
+            {/* Top riders */}
+            <SectionTitle style={{ marginTop: 24 }}>Top riders (approved runs)</SectionTitle>
+            <TopRiders results={data} />
+
+            {/* Site health */}
+            <SectionTitle style={{ marginTop: 24 }}>Site health</SectionTitle>
+            <SitePing />
+
+            {/* Uptime log link */}
+            <div style={{ marginTop: 12, fontSize: 12, color: MUTED }}>
+              Uptime history →{' '}
+              <a href="https://github.com/Ariteme/moto-gymkhana/blob/master/monitoring/uptime.log"
+                target="_blank" rel="noopener noreferrer" style={{ color: BLUE }}>
+                monitoring/uptime.log
+              </a>
+            </div>
+          </>
+        )}
+
       </div>
     </div>
     </div>
@@ -639,6 +681,148 @@ function SectionTitle({ children, style }) {
   return (
     <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, ...style }}>
       {children}
+    </div>
+  )
+}
+
+function WeeklyActivity({ results }) {
+  const now = Date.now()
+  const MS_WEEK = 7 * 24 * 3600 * 1000
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const start = now - (7 - i) * MS_WEEK
+    const end = start + MS_WEEK
+    const count = results.filter(r => {
+      const t = new Date(r.created_at).getTime()
+      return t >= start && t < end
+    }).length
+    return { label: new Date(start).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }), count }
+  })
+  const max = Math.max(...weeks.map(w => w.count), 1)
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 90 }}>
+        {weeks.map((w, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 2, height: '100%' }}>
+            {w.count > 0 && <div style={{ fontSize: 9, color: MUTED, lineHeight: 1 }}>{w.count}</div>}
+            <div style={{
+              width: '100%',
+              height: w.count > 0 ? `${Math.max(w.count / max * 54, 4)}px` : '2px',
+              background: w.count > 0 ? GREEN : BORDER,
+              borderRadius: '3px 3px 0 0',
+              opacity: w.count > 0 ? 0.45 + 0.55 * (w.count / max) : 1,
+            }} />
+            <div style={{ fontSize: 8, color: MUTED, textAlign: 'center', lineHeight: 1.3, marginTop: 4 }}>
+              {w.label.split(' ').map((p, j) => <div key={j}>{p}</div>)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MapStats({ results }) {
+  const counts = {}
+  for (const r of results) {
+    if (!counts[r.map_name]) counts[r.map_name] = { total: 0, approved: 0 }
+    counts[r.map_name].total++
+    if (r.approved) counts[r.map_name].approved++
+  }
+  const rows = Object.entries(counts).sort((a, b) => b[1].approved - a[1].approved)
+  const maxApproved = rows[0]?.[1]?.approved || 1
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+      {rows.length === 0 && <div style={{ padding: '16px 14px', color: MUTED, fontSize: 13 }}>No data yet.</div>}
+      {rows.map(([name, s], i) => (
+        <div key={name} style={{ padding: '10px 14px', borderBottom: i < rows.length - 1 ? `1px solid ${BORDER}` : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 11, color: MUTED, width: 16, textAlign: 'right', flexShrink: 0 }}>{i + 1}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, color: TEXT, fontWeight: 600, marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+            <div style={{ height: 3, borderRadius: 2, background: BORDER }}>
+              <div style={{ width: `${s.approved / maxApproved * 100}%`, height: '100%', background: GREEN, borderRadius: 2 }} />
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.approved}</div>
+            {s.total !== s.approved && <div style={{ fontSize: 10, color: ORANGE }}>+{s.total - s.approved} pending</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TopRiders({ results }) {
+  const counts = {}
+  for (const r of results) {
+    if (!r.approved || !r.riders?.name) continue
+    counts[r.riders.name] = (counts[r.riders.name] || 0) + 1
+  }
+  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  const medals = ['🥇', '🥈', '🥉']
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+      {rows.length === 0 && <div style={{ padding: '16px 14px', color: MUTED, fontSize: 13 }}>No approved runs yet.</div>}
+      {rows.map(([name, count], i) => (
+        <div key={name} style={{ padding: '10px 14px', borderBottom: i < rows.length - 1 ? `1px solid ${BORDER}` : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: i < 3 ? 15 : 11, width: 20, textAlign: 'center', flexShrink: 0, color: MUTED }}>
+            {medals[i] ?? i + 1}
+          </div>
+          <div style={{ flex: 1, fontSize: 13, color: TEXT, fontWeight: 600 }}>{name}</div>
+          <div style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>{count} run{count !== 1 ? 's' : ''}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SitePing() {
+  const [pinging, setPinging] = useState(false)
+  const [result, setResult] = useState(null)
+
+  const ping = async () => {
+    setPinging(true)
+    setResult(null)
+    try {
+      const t0 = performance.now()
+      const res = await fetch('/api/health', { cache: 'no-store' })
+      const ms = Math.round(performance.now() - t0)
+      const json = await res.json()
+      setResult({ ok: res.ok && json.ok, ms, db: json.db, dbMs: json.dbMs })
+    } catch (e) {
+      setResult({ ok: false, error: e.message })
+    }
+    setPinging(false)
+  }
+
+  const msColor = (ms) => ms < 300 ? GREEN : ms < 1000 ? ORANGE : RED
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={ping} disabled={pinging} style={{
+          padding: '9px 18px', background: `${BLUE}20`, border: `1px solid ${BLUE}50`,
+          borderRadius: 9, color: BLUE, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          opacity: pinging ? 0.6 : 1,
+        }}>
+          {pinging ? 'Pinging…' : '🏓 Ping site'}
+        </button>
+        {result && (
+          <>
+            <span style={{ fontSize: 13, fontWeight: 700, color: result.ok ? GREEN : RED }}>
+              {result.ok ? '✓ Online' : '✗ Error'}
+            </span>
+            {result.ms != null && (
+              <span style={{ fontSize: 13, color: msColor(result.ms) }}>HTTP {result.ms}ms</span>
+            )}
+            {result.dbMs != null && (
+              <span style={{ fontSize: 13, color: msColor(result.dbMs) }}>DB {result.dbMs}ms</span>
+            )}
+            {result.error && <span style={{ fontSize: 12, color: RED }}>{result.error}</span>}
+          </>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, marginTop: 10 }}>Checks homepage response time + Supabase connectivity.</div>
     </div>
   )
 }
